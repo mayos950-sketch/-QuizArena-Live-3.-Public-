@@ -6,48 +6,140 @@
 <meta name="theme-color" content="#071321">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>QuizArena Live</title>
+<title>QuizArena</title>
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#06111d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="QuizArena">
+<link rel="apple-touch-icon" href="icon-192.png">
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 :root{
- --bg:#06111d;--panel:#0d2234;--panel2:#122e45;--text:#f7fbff;--muted:#9fb4c5;
- --blue:#168eea;--green:#13c766;--gold:#ffc64b;--red:#ff4e55;--line:#24465d;
+  --bg:#02070d; --panel:#07131f; --panel2:#0b1e2f; --line:#1d4b6d;
+  --text:#f8fbff; --muted:#99aec2; --gold:#ffc23d; --gold2:#ff8b00;
+  --blue:#0f91ff; --blue2:#0055a4; --green:#1fd75f; --red:#ff334d;
 }
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:
-radial-gradient(circle at 50% -10%,#16466f 0,#091725 35%,#050b12 75%);
-color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
-body{min-height:100vh}
-.wrap{max-width:760px;margin:auto;padding:18px 16px 36px}
-.hero{text-align:center;padding:12px 0 6px}
-.logo{font-weight:1000;font-size:42px;letter-spacing:-1.5px;color:var(--gold);text-shadow:0 3px 20px #000}
-.sub{color:#d5e3ec}
-.card{background:linear-gradient(180deg,rgba(20,51,75,.96),rgba(8,29,45,.96));border:1px solid rgba(255,255,255,.11);
-border-radius:20px;padding:17px;margin:13px 0;box-shadow:0 10px 32px rgba(0,0,0,.25)}
-.btn{width:100%;padding:15px 16px;border:0;border-radius:15px;margin:7px 0;font-size:17px;font-weight:800;color:white;
-background:linear-gradient(180deg,#229ff4,#0972c3);box-shadow:inset 0 1px rgba(255,255,255,.2)}
-.btn:disabled{opacity:.45}
-.green{background:linear-gradient(180deg,#1bdc75,#079845)}
-.gold{background:linear-gradient(180deg,#ffe077,#e7a922);color:#18222a}
-.dark{background:linear-gradient(180deg,#244963,#153348)}
-.danger{background:linear-gradient(180deg,#ff6b6b,#c8343b)}
-input,select{width:100%;padding:14px;border-radius:13px;border:1px solid var(--line);background:#071a29;color:white;margin:6px 0;font-size:16px}
+html,body{
+  margin:0; min-height:100%; color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  background:
+    radial-gradient(circle at 50% -10%,rgba(20,92,160,.55),transparent 38%),
+    radial-gradient(circle at 10% 20%,rgba(0,123,255,.18),transparent 30%),
+    radial-gradient(circle at 90% 20%,rgba(255,106,0,.14),transparent 30%),
+    linear-gradient(180deg,#03080d 0%,#06111d 45%,#03070d 100%);
+}
+body:before{
+  content:""; position:fixed; inset:0; pointer-events:none; opacity:.18;
+  background:
+   repeating-linear-gradient(90deg,transparent 0 42px,rgba(255,255,255,.025) 43px 44px),
+   radial-gradient(circle at 50% 100%,rgba(255,153,0,.18),transparent 30%);
+}
+.wrap{max-width:760px;margin:auto;padding:14px 14px 34px;position:relative;z-index:1}
+.hero{text-align:center;padding:10px 0 8px}
+.logo{
+  font-weight:1000;font-size:48px;letter-spacing:-2px;
+  background:linear-gradient(180deg,#fff7b0,#ffd04c 38%,#ff9b00 68%,#7f3c00);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 4px 0 #5a2700) drop-shadow(0 10px 18px rgba(255,159,0,.35));
+  text-transform:uppercase;
+}
+.logo:before{content:"👑";display:block;font-size:52px;line-height:1;margin-bottom:-5px}
+.sub{color:#f2f6fa;font-size:18px;margin-top:8px}
+.arena-badge{
+  display:inline-block;margin-top:5px;padding:5px 12px;border:1px solid #32668c;border-radius:999px;
+  background:rgba(4,24,38,.85);color:#c9dced;font-size:13px
+}
+.card{
+  background:linear-gradient(180deg,rgba(10,31,48,.97),rgba(3,15,25,.97));
+  border:1px solid rgba(72,153,205,.34);border-radius:20px;padding:17px;margin:13px 0;
+  box-shadow:0 12px 36px rgba(0,0,0,.48), inset 0 1px rgba(255,255,255,.04)
+}
+.card.goldframe{border-color:#b36c00;box-shadow:0 0 0 1px #4a2500 inset,0 12px 40px rgba(255,153,0,.1)}
+.btn{
+  width:100%;padding:15px 16px;border:0;border-radius:15px;margin:7px 0;
+  font-size:17px;font-weight:900;color:white;
+  background:linear-gradient(180deg,#1f9cff,#075ba7);
+  box-shadow:inset 0 1px rgba(255,255,255,.32),0 8px 18px rgba(0,80,160,.22);
+}
+.btn:disabled{opacity:.42}
+.btn.green,.green{background:linear-gradient(180deg,#31ef72,#0a9c3e)}
+.btn.gold,.gold{
+  background:linear-gradient(180deg,#ffe276,#ffbe2b 48%,#d77700);
+  color:#171008;border:1px solid #ffe3a0;
+  box-shadow:0 7px 22px rgba(255,167,0,.25), inset 0 1px #fff5c2
+}
+.btn.dark,.dark{background:linear-gradient(180deg,#17466b,#0b2840)}
+.btn.danger,.danger{background:linear-gradient(180deg,#ff5964,#b51128)}
+input,select{
+  width:100%;padding:14px;border-radius:13px;border:1px solid #275777;
+  background:#04131f;color:white;margin:7px 0;font-size:16px
+}
 .row{display:flex;gap:10px}.row>*{flex:1}
 .muted{color:var(--muted)}.center{text-align:center}
-.kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}.kpi .card{margin:0}
-.code{font-size:34px;font-weight:1000;letter-spacing:5px;color:var(--gold)}
-.question{font-size:25px;line-height:1.22;margin:16px 0}
-.answer{width:100%;padding:15px;border:1px solid #3a637f;border-radius:14px;background:#0c2b42;color:white;text-align:left;margin:7px 0;font-size:17px}
-.answer.sel{outline:3px solid var(--gold);background:#143a54}
-.timer{width:74px;height:74px;border:5px solid var(--red);border-radius:50%;display:grid;place-items:center;margin:auto;font-size:28px;font-weight:1000}
-table{width:100%;border-collapse:collapse}td{padding:11px 5px;border-bottom:1px solid rgba(255,255,255,.09)}
-.rank{font-size:21px}.winner{background:rgba(255,198,75,.11)}
-.pill{display:inline-block;padding:4px 9px;border-radius:999px;background:#183b53;color:#dceaf4;font-size:13px}
-.trophy{font-size:86px}
+.code{
+  font-size:36px;font-weight:1000;letter-spacing:7px;color:var(--gold);
+  text-shadow:0 0 20px rgba(255,183,0,.35)
+}
+.question{
+  font-size:28px;line-height:1.18;margin:16px 0;font-weight:850;
+  text-shadow:0 2px 10px #000
+}
+.answer{
+  width:100%;padding:15px;border:1px solid #2c6288;border-radius:14px;
+  background:linear-gradient(180deg,#0a2940,#071a29);color:white;text-align:left;
+  margin:7px 0;font-size:17px
+}
+.answer.sel{
+  outline:2px solid #32e866;
+  background:linear-gradient(180deg,#0db943,#066f29);
+  box-shadow:0 0 20px rgba(44,255,108,.22)
+}
+.timer{
+  width:78px;height:78px;border:6px solid var(--red);border-radius:50%;
+  display:grid;place-items:center;margin:auto;font-size:30px;font-weight:1000;
+  background:#07121d;box-shadow:0 0 18px rgba(255,35,65,.45), inset 0 0 14px #000
+}
+table{width:100%;border-collapse:collapse}
+td{padding:12px 6px;border-bottom:1px solid rgba(255,255,255,.08)}
+.rank{font-size:22px}.winner{background:linear-gradient(90deg,rgba(255,185,0,.28),rgba(255,185,0,.05))}
+.pill{
+  display:inline-block;padding:6px 10px;border-radius:999px;background:#0d3451;
+  color:#dceaf4;font-size:13px;border:1px solid #2d5d7e
+}
+.trophy{
+  font-size:96px;filter:drop-shadow(0 10px 20px rgba(255,176,0,.35))
+}
+.category-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cat{
+  min-height:92px;border-radius:16px;border:1px solid #2b6287;
+  background:linear-gradient(180deg,#123a59,#071c2c);
+  display:flex;align-items:flex-end;justify-content:center;padding:12px;
+  font-weight:900;box-shadow:inset 0 1px rgba(255,255,255,.08)
+}
+.leaderboard-row{
+  display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;
+  padding:12px 8px;border-bottom:1px solid rgba(255,255,255,.08)
+}
+.leaderboard-row:first-child{
+  background:linear-gradient(90deg,#6d3e00,#b86e00,#6d3e00);
+  border-radius:12px;border:1px solid #ffd064
+}
 hr{border:0;border-top:1px solid rgba(255,255,255,.1)}
 .small{font-size:13px}
-@media(max-width:520px){.wrap{padding:10px 12px 28px}.logo{font-size:36px}.question{font-size:23px}}
+.install-note{
+  text-align:center;color:#bfd3e3;font-size:13px;margin-top:10px
+}
+@media(max-width:520px){
+  .wrap{padding:10px 11px 26px}.logo{font-size:42px}.logo:before{font-size:46px}
+  .question{font-size:25px}.card{border-radius:18px}.btn{font-size:16px}
+}
 </style>
+
 </head>
 <body>
 <div id="app"></div>
@@ -222,22 +314,43 @@ function playerUrl(p,s){
 
 function home(){
  localStorage.removeItem("qa_host_token");
- app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">👑 QUIZARENA</div><p class="sub">Norge & Verden · 10 spørsmål · Live med venner</p></div>
- <div class="card"><h2>🎙️ Start et spill</h2><p class="muted">Lag en live quiz, inviter venner og følg ranglisten.</p><button class="btn green" onclick="hostSetup()">Spill nå</button></div>
- <div class="card"><h3>🏆 3 seire = personlig trofé</h3><p class="muted">Vinneren samler seire. Etter tre seire låses et personlig PNG-trofé opp.</p></div></main>`;
+ app.innerHTML=`<main class="wrap">
+   <div class="hero">
+     <div class="logo">QuizArena</div>
+     <p class="sub">🇳🇴 Norge & Verden</p>
+     <div class="arena-badge">15 sekunder · Live med venner</div>
+   </div>
+   <div class="card goldframe center">
+     <div style="font-size:70px;margin:8px 0 2px">🌍</div>
+     <button class="btn gold" onclick="hostSetup()">⚔️ Spill nå</button>
+     <button class="btn" onclick="hostSetup()">👥 Lag eller bli med</button>
+     <button class="btn dark" onclick="hostSetup()">📖 Velg kategori</button>
+     <button class="btn dark" onclick="alert('Statistikk kommer i neste steg')">📊 Statistikk</button>
+     <button class="btn dark" onclick="alert('Innstillinger kommer i neste steg')">⚙️ Innstillinger</button>
+     <div class="install-note">Kan installeres på iPhone som egen app</div>
+   </div>
+ </main>`;
 }
 function hostSetup(){
  const qm=getQuizmasterName();
- app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">QUIZARENA</div></div>
- <div class="card"><h2>Nytt spill</h2>
- ${qm?`<div class="pill">Quizmaster: ${esc(qm)}</div>`:`<label>Ditt navn</label><input id="qmname" placeholder="Navn">`}
- <label>Vanskelighetsgrad</label><select id="diff"><option value="easy">Lett</option><option value="hard">Vanskelig</option><option value="mix" selected>Miks</option></select>
- <div class="pill">⏱️ 15 sekunder per spørsmål</div><div class="pill">🧠 Kunnskapsspørsmål · ingen regneoppgaver</div>
-<label>Antall spørsmål</label>
-<select id="qcount"><option value="5">5 spørsmål</option><option value="10" selected>10 spørsmål</option></select>
- <p class="muted small">5 eller 10 spørsmål per runde · du spiller selv som quizmaster</p>
- <button class="btn green" onclick="createSession()">Opprett quiz</button>
- <button class="btn dark" onclick="home()">Tilbake</button></div></main>`;
+ app.innerHTML=`<main class="wrap">
+   <div class="hero"><div class="logo">QuizArena</div></div>
+   <div class="card">
+     <h2>Velg vanskelighetsgrad</h2>
+     ${qm?`<div class="pill">Quizmaster: ${esc(qm)}</div>`:`<label>Ditt navn</label><input id="qmname" placeholder="Navn">`}
+     <select id="diff">
+       <option value="easy">⭐ Lett</option>
+       <option value="mix" selected>⭐⭐ Middels / Miks</option>
+       <option value="hard">⭐⭐⭐ Krevende</option>
+     </select>
+     <div class="pill">⏱️ 15 sekunder per spørsmål</div>
+     <div class="pill">🧠 Ingen regneoppgaver</div>
+     <label>Antall spørsmål</label>
+     <select id="qcount"><option value="5">5 spørsmål</option><option value="10" selected>10 spørsmål</option></select>
+     <button class="btn gold" onclick="createSession()">Opprett quiz</button>
+     <button class="btn dark" onclick="home()">Tilbake</button>
+   </div>
+ </main>`;
 }
 async function createSession(){
  let qm=getQuizmasterName();
@@ -246,18 +359,18 @@ async function createSession(){
    if(!qm){alert("Skriv navnet ditt én gang.");return}
    setQuizmasterName(qm);
  }
- const diff=document.getElementById("diff").value,limit=15,qcount=Number(document.getElementById("qcount")?.value||10);
- let pool=QUESTIONS.filter(q=>diff==="mix"||q.difficulty===diff);
- while(pool.length<qcount) pool=pool.concat(pool);
- pool=shuffle(pool).slice(0,qcount);
+ const diff=document.getElementById("diff").value;
+ const limit=15;
+ const qcount=Number(document.getElementById("qcount")?.value||10);
+ const pool=pickQuestionSet(diff,qcount);
  const {data,error}=await sb.rpc("qa_create_session",{p_difficulty:diff,p_time_limit:limit,p_questions:pool});
  if(error){alert("Kunne ikke opprette quiz: "+error.message);return}
  const hostToken=data.host_token;
  const added=await sb.rpc("qa_add_player_live",{p_host_token:hostToken,p_name:qm,p_phone:null});
  if(added.error){alert("Quiz opprettet, men quizmaster kunne ikke legges til: "+added.error.message);return}
  let me=Array.isArray(added.data)?added.data[0]:added.data;
- if(me?.player && !me.player_token) me=me.player;
- if(me?.player_token) setHostPlayerToken(me.player_token);
+ if(me?.player && !me.player_token)me=me.player;
+ if(me?.player_token)setHostPlayerToken(me.player_token);
  localStorage.setItem("qa_host_token",hostToken);
  location.href=location.pathname+"?host="+encodeURIComponent(hostToken);
 }
@@ -409,16 +522,23 @@ async function hostStart(token){hostSelected="";const {error}=await sb.rpc("qa_h
 async function hostNext(token){if(hostAutoTimer)clearTimeout(hostAutoTimer);hostAutoTimer=null;hostSelected="";const {error}=await sb.rpc("qa_host_next",{p_host_token:token});if(error)alert(error.message)}
 async function nextRound(token){
  const diff=state.session.difficulty||"mix";
- let pool=QUESTIONS.filter(q=>diff==="mix"||q.difficulty===diff);while(pool.length<10)pool=pool.concat(pool);
- pool=shuffle(pool).slice(0,10);
- const {error}=await sb.rpc("qa_start_next_round",{p_host_token:token,p_difficulty:diff,p_time_limit:state.session.time_limit_seconds||15,p_questions:pool});
+ const count=state.session.question_count||10;
+ const pool=pickQuestionSet(diff,count);
+ const {error}=await sb.rpc("qa_start_next_round",{
+   p_host_token:token,
+   p_difficulty:diff,
+   p_time_limit:15,
+   p_questions:pool
+ });
  if(error){alert(error.message);return}
  await sb.rpc("qa_host_start",{p_host_token:token});
 }
 async function endQuiz(token){
  if(!confirm("Avslutte quizen?"))return;
- const {error}=await sb.rpc("qa_end_quiz",{p_host_token:token});if(error)alert(error.message);
- else{localStorage.removeItem("qa_host_token");location.href=location.pathname}
+ const {error}=await sb.rpc("qa_end_quiz",{p_host_token:token});
+ if(error){alert(error.message);return}
+ localStorage.removeItem("qa_host_token");
+ location.href=location.pathname;
 }
 
 async function loadPlayer(){
@@ -461,7 +581,9 @@ function renderResult(){
  <p style="font-size:24px"><b>${p.correct_count??0}/${s.question_count||10}</b> riktig</p><p class="muted">${p.bonus_points??0} bonuspoeng · ${p.score} poeng totalt</p><p>Plass ${p.rank} av ${p.total_players}</p>
  ${wrong.length?`<div class="card" style="text-align:left"><h3>Feil svar (${wrong.length})</h3>${wrong.map(x=>`<p><b>${esc(x.question)}</b><br><span class="muted">Ditt svar: ${esc(x.your_answer||"Ikke besvart")}</span><br><span style="color:#91efac">Riktig: ${esc(x.correct_answer)}</span></p>`).join("<hr>")}</div>`:'<div class="card">🎯 Alt riktig!</div>'}
  ${p.is_winner?`<div class="card"><h2>${p.wins||0} seire totalt</h2>${p.trophy_unlocked?`<div class="trophy">🏆</div><h2>Trofé låst opp!</h2><button class="btn gold" onclick="downloadTrophy()">Last ned trofé</button>`:`<p>${Math.max(0,3-(p.wins||0))} seier(e) igjen til trofé.</p>`}</div>`:""}
- ${s.status==="closed"?'<h3>Quizen er avsluttet.</h3>':'<p class="muted">Vent på quizmaster for neste runde.</p>'}</div></main>`;
+ ${s.status==="closed"?'<h3>Quizen er avsluttet.</h3>':'<p class="muted">Vent på quizmaster for neste runde.</p>'}
+ <button id="qaSoloAfter" class="btn gold" onclick="soloHome()">🎮 Spill alene</button>
+ </div></main>`;
 }
 function celebrate(){
  try{const u=new SpeechSynthesisUtterance(`Hurra! Gratulerer ${state.player.name}!`);u.lang="nb-NO";speechSynthesis.cancel();speechSynthesis.speak(u)}catch{}
@@ -505,9 +627,8 @@ function soloHome(){
 function startSolo(){
   const diff=document.getElementById("soloDiff")?.value||"mix";
   const count=Number(document.getElementById("soloCount")?.value||10);
-  let pool=QUESTIONS.filter(q=>diff==="mix"||q.difficulty===diff);
-  while(pool.length<count) pool=pool.concat(pool);
-  soloState={questions:shuffle(pool).slice(0,count),index:0,correct:0,selected:"",seconds:15,answers:[]};
+  const pool=pickQuestionSet(diff,count);
+  soloState={questions:pool,index:0,correct:0,selected:"",seconds:15,answers:[]};
   renderSolo();
 }
 
