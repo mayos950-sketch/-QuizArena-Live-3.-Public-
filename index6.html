@@ -485,6 +485,51 @@ function fillSavedPlayer(i){
  if(ph)ph.value=p.phone||"";
 }
 
+
+function getPendingInvite(){
+  try{return JSON.parse(sessionStorage.getItem("qa_pending_invite")||"null")}
+  catch{return null}
+}
+function setPendingInvite(data){
+  if(data)sessionStorage.setItem("qa_pending_invite",JSON.stringify(data));
+  else sessionStorage.removeItem("qa_pending_invite");
+}
+function clearPendingInvite(){
+  setPendingInvite(null);
+  const tok=localStorage.getItem("qa_host_token");
+  if(tok && state)renderHost(tok);
+}
+function pendingSmsHref(){
+  const p=getPendingInvite();
+  if(!p)return "#";
+  const clean=(p.phone||"").replace(/[^+0-9]/g,"");
+  const body=encodeURIComponent(`QuizArena Live
+
+${p.url}
+
+Trykk på lenken over for å bli med.`);
+  const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+  return isiOS?`sms:${clean}&body=${body}`:`sms:${clean}?body=${body}`;
+}
+async function sharePendingInvite(){
+  const p=getPendingInvite();
+  if(!p)return;
+  try{
+    if(navigator.share){
+      await navigator.share({title:"QuizArena Live",text:`Bli med i QuizArena, ${p.name}!`,url:p.url});
+      return;
+    }
+  }catch(e){
+    if(e?.name==="AbortError")return;
+  }
+  try{
+    await navigator.clipboard.writeText(p.url);
+    alert("Invitasjonslenken er kopiert.");
+  }catch{
+    prompt("Kopier lenken:",p.url);
+  }
+}
+
 function appBaseUrl(){
  return "https://mayos950-sketch.github.io/-QuizArena-Live-3.-Public-/";
 }
@@ -589,6 +634,7 @@ function hostSetup(){
  </main>`;
 }
 async function createSession(){
+ setPendingInvite(null);
  let qm=getQuizmasterName();
  if(!qm){
    qm=(document.getElementById("qmname")?.value||"").trim();
@@ -697,7 +743,18 @@ function renderHost(token){
    <p class="muted">Du er allerede med som quizmaster: <b>${esc(getQuizmasterName())}</b></p>
    ${saved.length?`<div class="muted small">Lagrede spillere</div><div>${saved.map((p,i)=>`<button class="pill" style="margin:3px" onclick="fillSavedPlayer(${i})">${esc(p.name)}</button>`).join("")}</div>`:""}
    <input id="pname" placeholder="Navn, f.eks. Petra" value="${esc(getInviteDraft().name||'')}" oninput="updateInviteDraft()"><input id="pphone" placeholder="Telefonnummer" inputmode="tel" value="${esc(getInviteDraft().phone||'')}" oninput="updateInviteDraft()">
-   <button class="btn green" onclick="addAndInvite('${esc(token)}')">📨 Inviter</button></div>`;
+   <button id="qaInviteBtn" class="btn green" onclick="addAndInvite('${esc(token)}')">📨 Inviter</button></div>`;
+   const pending=getPendingInvite();
+   if(pending){
+     const smsHref=pendingSmsHref();
+     h+=`<div class="card">
+       <h3>✅ ${esc(pending.name)} er lagt til</h3>
+       <p class="muted">Send invitasjonen nå:</p>
+       ${pending.phone?`<a class="btn green" style="display:block;text-align:center;text-decoration:none" href="${esc(smsHref)}">💬 Send SMS</a>`:""}
+       <button class="btn gold" onclick="sharePendingInvite()">🔗 Del lenke</button>
+       <button class="btn dark" onclick="clearPendingInvite()">Ferdig</button>
+     </div>`;
+   }
    h+=`<div class="card"><h3>Spillere (${ps.length}/10)</h3>${ps.length?ps.map(p=>`<div style="padding:10px 0"><b>${esc(p.name)}</b> <span class="muted">${esc(p.phone||"")}</span>
    <div><span class="pill">${p.wins||0} seire</span> ${p.trophy_unlocked?'<span class="pill">🏆 Trofé</span>':''}</div></div>`).join("<hr>"):'<p class="muted">Ingen spillere ennå.</p>'}</div>`;
    h+=`<button class="btn green" ${ps.length?"":"disabled"} onclick="hostStart('${esc(token)}')">Start spørsmål 1</button>`;
@@ -742,40 +799,53 @@ async function addAndInvite(token){
  const n=document.getElementById("pname"),ph=document.getElementById("pphone");
  const name=n?.value.trim()||"",phone=ph?.value.trim()||"";
  if(!name){alert("Skriv inn navn først.");return}
- const {data,error}=await sb.rpc("qa_add_player_live",{p_host_token:token,p_name:name,p_phone:phone||null});
- if(error){alert("Kunne ikke legge til spiller: "+error.message);return}
+
+ const btn=document.getElementById("qaInviteBtn");
+ if(btn){btn.disabled=true;btn.textContent="Legger til…";}
+
+ const {data,error}=await sb.rpc("qa_add_player_live",{
+   p_host_token:token,
+   p_name:name,
+   p_phone:phone||null
+ });
+
+ if(error){
+   if(btn){btn.disabled=false;btn.textContent="📨 Inviter";}
+   alert("Kunne ikke legge til spiller: "+error.message);
+   return;
+ }
+
  let p=data;
  if(Array.isArray(p))p=p[0];
  if(p?.player && !p.player_token)p=p.player;
+
  if(!p?.player_token){
    const st=await sb.rpc("qa_host_state",{p_host_token:token});
    p=(st.data?.players||[]).filter(x=>x.name===name).slice(-1)[0];
  }
- if(!p?.player_token){alert("Invitasjonen kunne ikke opprettes. Prøv igjen.");return}
+
+ if(!p?.player_token){
+   if(btn){btn.disabled=false;btn.textContent="📨 Inviter";}
+   alert("Spilleren ble lagt til, men invitasjonslenken kunne ikke lages. Prøv igjen.");
+   return;
+ }
+
+ const url=playerUrl(p,state.session);
  savePlayerLocal(name,phone);
  setInviteDraft("","");
- n.value="";if(ph)ph.value="";
- await invitePlayer(p,state.session,phone);
+ setPendingInvite({name,phone,url});
+ if(n)n.value="";
+ if(ph)ph.value="";
+
+ // Do NOT open SMS here: iPhone may block a custom URL after an awaited network call.
+ // Render explicit user-tappable SMS/share buttons instead.
+ renderHost(token);
 }
 async function invitePlayer(p,s,phone=""){
  const url=playerUrl(p,s);
- const message=`QuizArena Live
-
-${url}
-
-Trykk på lenken over for å bli med.`;
- if(phone){
-   const clean=phone.replace(/[^+0-9]/g,"");
-   const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-   const body=encodeURIComponent(message);
-   location.href=isiOS?`sms:${clean}&body=${body}`:`sms:${clean}?body=${body}`;
-   return;
- }
- try{
-   if(navigator.share){await navigator.share({title:"QuizArena Live",text:"QuizArena Live",url});return}
- }catch(e){if(e?.name==="AbortError")return}
- try{await navigator.clipboard.writeText(url);alert("Invitasjonslenken er kopiert.")}
- catch{prompt("Kopier lenken:",url)}
+ setPendingInvite({name:p.name||"Spiller",phone:phone||p.phone||"",url});
+ const tok=localStorage.getItem("qa_host_token");
+ if(tok&&state)renderHost(tok);
 }
 
 async function hostStart(token){unlockQuizAudio();hostSelected="";const {error}=await sb.rpc("qa_host_start",{p_host_token:token});if(error)alert(error.message)}
