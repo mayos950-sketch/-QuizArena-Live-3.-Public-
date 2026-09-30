@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#071321">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>QuizArena Live</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+ --bg:#06111d;--panel:#0d2234;--panel2:#122e45;--text:#f7fbff;--muted:#9fb4c5;
+ --blue:#168eea;--green:#13c766;--gold:#ffc64b;--red:#ff4e55;--line:#24465d;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:
+radial-gradient(circle at 50% -10%,#16466f 0,#091725 35%,#050b12 75%);
+color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+body{min-height:100vh}
+.wrap{max-width:760px;margin:auto;padding:18px 16px 36px}
+.hero{text-align:center;padding:12px 0 6px}
+.logo{font-weight:1000;font-size:42px;letter-spacing:-1.5px;color:var(--gold);text-shadow:0 3px 20px #000}
+.sub{color:#d5e3ec}
+.card{background:linear-gradient(180deg,rgba(20,51,75,.96),rgba(8,29,45,.96));border:1px solid rgba(255,255,255,.11);
+border-radius:20px;padding:17px;margin:13px 0;box-shadow:0 10px 32px rgba(0,0,0,.25)}
+.btn{width:100%;padding:15px 16px;border:0;border-radius:15px;margin:7px 0;font-size:17px;font-weight:800;color:white;
+background:linear-gradient(180deg,#229ff4,#0972c3);box-shadow:inset 0 1px rgba(255,255,255,.2)}
+.btn:disabled{opacity:.45}
+.green{background:linear-gradient(180deg,#1bdc75,#079845)}
+.gold{background:linear-gradient(180deg,#ffe077,#e7a922);color:#18222a}
+.dark{background:linear-gradient(180deg,#244963,#153348)}
+.danger{background:linear-gradient(180deg,#ff6b6b,#c8343b)}
+input,select{width:100%;padding:14px;border-radius:13px;border:1px solid var(--line);background:#071a29;color:white;margin:6px 0;font-size:16px}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.muted{color:var(--muted)}.center{text-align:center}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}.kpi .card{margin:0}
+.code{font-size:34px;font-weight:1000;letter-spacing:5px;color:var(--gold)}
+.question{font-size:25px;line-height:1.22;margin:16px 0}
+.answer{width:100%;padding:15px;border:1px solid #3a637f;border-radius:14px;background:#0c2b42;color:white;text-align:left;margin:7px 0;font-size:17px}
+.answer.sel{outline:3px solid var(--gold);background:#143a54}
+.timer{width:74px;height:74px;border:5px solid var(--red);border-radius:50%;display:grid;place-items:center;margin:auto;font-size:28px;font-weight:1000}
+table{width:100%;border-collapse:collapse}td{padding:11px 5px;border-bottom:1px solid rgba(255,255,255,.09)}
+.rank{font-size:21px}.winner{background:rgba(255,198,75,.11)}
+.pill{display:inline-block;padding:4px 9px;border-radius:999px;background:#183b53;color:#dceaf4;font-size:13px}
+.trophy{font-size:86px}
+hr{border:0;border-top:1px solid rgba(255,255,255,.1)}
+.small{font-size:13px}
+@media(max-width:520px){.wrap{padding:10px 12px 28px}.logo{font-size:36px}.question{font-size:23px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const SUPABASE_URL="https://yqwfvdicuacvawwndpuz.supabase.co";
+const SUPABASE_KEY="sb_publishable_pAKBRapvgeV7XQMGcYgNEA_i5KhtiDe";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const QUESTIONS=[
+{difficulty:"easy",question:"Hva heter hovedstaden i Norge?",options:["Oslo","Bergen","Trondheim","Stavanger"],correct:"Oslo"},
+{difficulty:"easy",question:"Hva er hovedstaden i Sverige?",options:["Stockholm","Göteborg","Malmö","Uppsala"],correct:"Stockholm"},
+{difficulty:"easy",question:"Hvem malte «Skrik»?",options:["Edvard Munch","Harald Sohlberg","Christian Krohg","Theodor Kittelsen"],correct:"Edvard Munch"},
+{difficulty:"easy",question:"Hvilken planet er nærmest solen?",options:["Merkur","Venus","Mars","Jorden"],correct:"Merkur"},
+{difficulty:"easy",question:"Hvor mange spillere har et fotballag på banen samtidig?",options:["11","9","10","12"],correct:"11"},
+{difficulty:"easy",question:"Hva heter Norges lengste elv?",options:["Glomma","Lågen","Numedalslågen","Tana"],correct:"Glomma"},
+{difficulty:"easy",question:"Hvilket dyr er størst på land?",options:["Afrikansk elefant","Neshorn","Flodhest","Sjiraff"],correct:"Afrikansk elefant"},
+{difficulty:"easy",question:"Hvor mange kontinenter regnes vanligvis?",options:["7","5","6","8"],correct:"7"},
+{difficulty:"easy",question:"Hva er kjemisk symbol for gull?",options:["Au","Ag","Fe","Gd"],correct:"Au"},
+{difficulty:"easy",question:"Hvilket hav ligger mellom Europa og Amerika?",options:["Atlanterhavet","Stillehavet","Indiahavet","Nordishavet"],correct:"Atlanterhavet"},
+{difficulty:"easy",question:"Hva er 12 × 12?",options:["144","124","132","154"],correct:"144"},
+{difficulty:"easy",question:"Hvor mange dager har et skuddår?",options:["366","365","364","367"],correct:"366"},
+{difficulty:"hard",question:"Hvilket land har hovedstaden Astana?",options:["Kasakhstan","Usbekistan","Kirgisistan","Mongolia"],correct:"Kasakhstan"},
+{difficulty:"hard",question:"Hvilket grunnstoff har atomnummer 74?",options:["Wolfram","Titan","Kobolt","Molybden"],correct:"Wolfram"},
+{difficulty:"hard",question:"Hvilket år ble unionen mellom Norge og Sverige oppløst?",options:["1905","1814","1918","1945"],correct:"1905"},
+{difficulty:"hard",question:"Hvilken norsk forfatter fikk Nobelprisen i litteratur i 1920?",options:["Knut Hamsun","Sigrid Undset","Bjørnstjerne Bjørnson","Jon Fosse"],correct:"Knut Hamsun"},
+{difficulty:"hard",question:"Hva er hovedstaden i Bhutan?",options:["Thimphu","Kathmandu","Dhaka","Colombo"],correct:"Thimphu"},
+{difficulty:"hard",question:"Hvilken planet har den korteste dagen?",options:["Jupiter","Saturn","Mars","Neptun"],correct:"Jupiter"},
+{difficulty:"hard",question:"Hvilket år falt Berlinmuren?",options:["1989","1991","1987","1990"],correct:"1989"},
+{difficulty:"hard",question:"Hva er SI-enheten for elektrisk motstand?",options:["Ohm","Volt","Ampere","Watt"],correct:"Ohm"},
+{difficulty:"hard",question:"Hvilket språk har flest morsmålsbrukere i verden?",options:["Mandarin-kinesisk","Engelsk","Spansk","Hindi"],correct:"Mandarin-kinesisk"},
+{difficulty:"hard",question:"Hvilket grunnstoff har symbolet Sb?",options:["Antimon","Sølv","Tinn","Selen"],correct:"Antimon"},
+{difficulty:"hard",question:"Hva heter den største månen til Saturn?",options:["Titan","Europa","Ganymedes","Triton"],correct:"Titan"},
+{difficulty:"hard",question:"Hvilken norsk polfarer nådde Sørpolen først?",options:["Roald Amundsen","Fridtjof Nansen","Otto Sverdrup","Helge Ingstad"],correct:"Roald Amundsen"}
+];
+
+const app=document.getElementById("app");
+const params=new URLSearchParams(location.search);
+const playerToken=params.get("token"), code=params.get("code"), hostParam=params.get("host");
+let poll=null,timer=null,state=null,selected="",seconds=15,startedAt=0;
+
+const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const shuffle=a=>[...a].sort(()=>Math.random()-.5);
+
+function getQuizmasterName(){ return localStorage.getItem("qa_quizmaster_name")||""; }
+function setQuizmasterName(name){ localStorage.setItem("qa_quizmaster_name",(name||"").trim()); }
+function getHostPlayerToken(){ return localStorage.getItem("qa_host_player_token")||""; }
+function setHostPlayerToken(token){ localStorage.setItem("qa_host_player_token",token||""); }
+
+function getSavedPlayers(){
+ try{return JSON.parse(localStorage.getItem("qa_saved_players")||"[]")}catch{return []}
+}
+function savePlayerLocal(name,phone){
+ const n=(name||"").trim(); if(!n)return;
+ const list=getSavedPlayers().filter(x=>(x.name||"").toLowerCase()!==n.toLowerCase());
+ list.unshift({name:n,phone:(phone||"").trim()});
+ localStorage.setItem("qa_saved_players",JSON.stringify(list.slice(0,12)));
+}
+function fillSavedPlayer(i){
+ const p=getSavedPlayers()[i]; if(!p)return;
+ const n=document.getElementById("pname"), ph=document.getElementById("pphone");
+ if(n)n.value=p.name||"";
+ if(ph)ph.value=p.phone||"";
+}
+
+function appBaseUrl(){
+ return "https://mayos950-sketch.github.io/-QuizArena-Live-3.-Public-/";
+}
+function playerUrl(p,s){
+ return `${appBaseUrl()}?code=${encodeURIComponent(s.code)}&token=${encodeURIComponent(p.player_token)}`;
+}
+
+function home(){
+ localStorage.removeItem("qa_host_token");
+ app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">👑 QUIZARENA</div><p class="sub">Norge & Verden · 10 spørsmål · Live med venner</p></div>
+ <div class="card"><h2>🎙️ Start et spill</h2><p class="muted">Lag en live quiz, inviter venner og følg ranglisten.</p><button class="btn green" onclick="hostSetup()">Spill nå</button></div>
+ <div class="card"><h3>🏆 3 seire = personlig trofé</h3><p class="muted">Vinneren samler seire. Etter tre seire låses et personlig PNG-trofé opp.</p></div></main>`;
+}
+function hostSetup(){
+ const qm=getQuizmasterName();
+ app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">QUIZARENA</div></div>
+ <div class="card"><h2>Nytt spill</h2>
+ ${qm?`<div class="pill">Quizmaster: ${esc(qm)}</div>`:`<label>Ditt navn</label><input id="qmname" placeholder="Navn">`}
+ <label>Vanskelighetsgrad</label><select id="diff"><option value="easy">Lett</option><option value="hard">Vanskelig</option><option value="mix" selected>Miks</option></select>
+ <label>Tid per spørsmål</label><select id="limit"><option>10</option><option selected>15</option><option>20</option></select>
+ <p class="muted small">10 spørsmål per runde · du spiller selv som quizmaster</p>
+ <button class="btn green" onclick="createSession()">Opprett quiz</button>
+ <button class="btn dark" onclick="home()">Tilbake</button></div></main>`;
+}
+async function createSession(){
+ let qm=getQuizmasterName();
+ if(!qm){
+   qm=(document.getElementById("qmname")?.value||"").trim();
+   if(!qm){alert("Skriv navnet ditt én gang.");return}
+   setQuizmasterName(qm);
+ }
+ const diff=document.getElementById("diff").value,limit=Number(document.getElementById("limit").value);
+ let pool=QUESTIONS.filter(q=>diff==="mix"||q.difficulty===diff);
+ while(pool.length<10) pool=pool.concat(pool);
+ pool=shuffle(pool).slice(0,10);
+ const {data,error}=await sb.rpc("qa_create_session",{p_difficulty:diff,p_time_limit:limit,p_questions:pool});
+ if(error){alert("Kunne ikke opprette quiz: "+error.message);return}
+ const hostToken=data.host_token;
+ const added=await sb.rpc("qa_add_player_live",{p_host_token:hostToken,p_name:qm,p_phone:null});
+ if(added.error){alert("Quiz opprettet, men quizmaster kunne ikke legges til: "+added.error.message);return}
+ let me=Array.isArray(added.data)?added.data[0]:added.data;
+ if(me?.player && !me.player_token) me=me.player;
+ if(me?.player_token) setHostPlayerToken(me.player_token);
+ localStorage.setItem("qa_host_token",hostToken);
+ location.href=location.pathname+"?host="+encodeURIComponent(hostToken);
+}
+
+let hostSelected="";
+function hostPick(ans){ hostSelected=ans; renderHost(localStorage.getItem("qa_host_token")||hostParam); }
+async function hostSendAnswer(){
+ const tok=getHostPlayerToken();
+ if(!tok||!hostSelected||!state?.session?.code)return;
+ const {error}=await sb.rpc("qa_submit_answer",{
+   p_code:state.session.code,
+   p_player_token:tok,
+   p_answer:hostSelected,
+   p_response_ms:0
+ });
+ if(error){alert(error.message);return}
+ hostSelected="";
+}
+
+async function loadHost(token){
+ clearInterval(poll);
+ const refresh=async()=>{
+   const {data,error}=await sb.rpc("qa_host_state",{p_host_token:token});
+   if(error||!data){app.innerHTML=`<main class="wrap"><div class="card"><h2>Kunne ikke hente quizen.</h2><button class="btn" onclick="location.href=location.pathname">Nytt spill</button></div></main>`;return}
+   state=data;
+   const a=document.activeElement;
+   if(!(a&&["pname","pphone"].includes(a.id))) renderHost(token);
+ };
+ await refresh();poll=setInterval(refresh,1000);
+}
+function renderHost(token){
+ const s=state.session,ps=state.players||[];
+ let h=`<main class="wrap"><div class="hero"><div class="logo">👑 QUIZARENA</div></div>
+ <div class="card"><div class="row"><div><div class="muted">Quizkode</div><div class="code">${esc(s.code)}</div></div><div><div class="muted">Runde</div><h2>${s.round_no||1}/10</h2></div></div></div>`;
+ if(s.status==="lobby"){
+   const saved=getSavedPlayers();
+   h+=`<div class="card"><h2>Inviter spillere</h2>
+   <p class="muted">Du er allerede med som quizmaster: <b>${esc(getQuizmasterName())}</b></p>
+   ${saved.length?`<div class="muted small">Lagrede spillere</div><div>${saved.map((p,i)=>`<button class="pill" style="margin:3px" onclick="fillSavedPlayer(${i})">${esc(p.name)}</button>`).join("")}</div>`:""}
+   <input id="pname" placeholder="Navn, f.eks. Petra"><input id="pphone" placeholder="Telefonnummer" inputmode="tel">
+   <button class="btn green" onclick="addAndInvite('${esc(token)}')">📨 Inviter</button></div>`;
+   h+=`<div class="card"><h3>Spillere (${ps.length}/10)</h3>${ps.length?ps.map(p=>`<div style="padding:10px 0"><b>${esc(p.name)}</b> <span class="muted">${esc(p.phone||"")}</span>
+   <div><span class="pill">${p.wins||0} seire</span> ${p.trophy_unlocked?'<span class="pill">🏆 Trofé</span>':''}</div></div>`).join("<hr>"):'<p class="muted">Ingen spillere ennå.</p>'}</div>`;
+   h+=`<button class="btn green" ${ps.length?"":"disabled"} onclick="hostStart('${esc(token)}')">Start spørsmål 1</button>`;
+ }else if(s.status==="live"){
+   const answered=ps.filter(p=>p.answered_current).length;
+   const q=state.question;
+   const myTok=getHostPlayerToken();
+   const me=ps.find(p=>p.player_token===myTok);
+   h+=`<div class="card center"><h2>Spørsmål ${(s.current_index||0)+1} av ${s.question_count||10}</h2><p>${answered}/${ps.length} har svart</p></div>`;
+   if(q){
+     h+=`<div class="card"><div class="muted small">QUIZMASTER SPILLER OGSÅ</div>
+     <div class="question">${esc(q.question)}</div>
+     ${(q.options||[]).map((o,i)=>`<button class="answer ${hostSelected===o?"sel":""}" ${me?.answered_current?"disabled":""} onclick='hostPick(${JSON.stringify(o)})'><b>${"ABCD"[i]}.</b> ${esc(o)}</button>`).join("")}
+     <button class="btn green" ${!hostSelected||me?.answered_current?"disabled":""} onclick="hostSendAnswer()">${me?.answered_current?"Svar sendt ✅":"Send mitt svar"}</button></div>`;
+   }else{
+     h+=`<div class="card"><h3>Laster spørsmål…</h3></div>`;
+   }
+   h+=`<div class="card"><h3>Spillere</h3>${ps.map(p=>`<div class="row" style="margin:9px 0"><span>${p.suspicious?"🚩 ":""}${esc(p.name)}</span><span style="text-align:right">${p.answered_current?"✅":"⏳"} ${p.tab_switch_count?`⚠️${p.tab_switch_count}`:""}</span></div>`).join("")}</div>`;
+   h+=`<button class="btn gold" onclick="hostNext('${esc(token)}')">${s.current_index===(s.question_count||10)-1?"Vis resultat":"Neste spørsmål"}</button>`;
+ }else{
+   const sorted=[...ps].sort((a,b)=>b.score-a.score);
+   h+=`<div class="card center"><div class="trophy">🏆</div><h1>Runde ${s.round_no||1} ferdig!</h1>
+   <table><tbody>${sorted.map((p,i)=>`<tr class="${i===0?"winner":""}"><td class="rank">${i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}</td><td>${esc(p.name)}</td><td><b>${p.score}/${s.question_count||10}</b></td></tr>`).join("")}</tbody></table></div>
+   ${s.round_no<10?`<button class="btn green" onclick="nextRound('${esc(token)}')">Neste runde</button>`:""}
+   <button class="btn danger" onclick="endQuiz('${esc(token)}')">Avslutt quiz</button>`;
+ }
+ app.innerHTML=h+"</main>";
+}
+
+async function addAndInvite(token){
+ const n=document.getElementById("pname"),ph=document.getElementById("pphone");
+ const name=n?.value.trim()||"",phone=ph?.value.trim()||"";
+ if(!name){alert("Skriv inn navn først.");return}
+ const {data,error}=await sb.rpc("qa_add_player_live",{p_host_token:token,p_name:name,p_phone:phone||null});
+ if(error){alert("Kunne ikke legge til spiller: "+error.message);return}
+ let p=data;
+ if(Array.isArray(p))p=p[0];
+ if(p?.player && !p.player_token)p=p.player;
+ if(!p?.player_token){
+   const st=await sb.rpc("qa_host_state",{p_host_token:token});
+   p=(st.data?.players||[]).filter(x=>x.name===name).slice(-1)[0];
+ }
+ if(!p?.player_token){alert("Invitasjonen kunne ikke opprettes. Prøv igjen.");return}
+ savePlayerLocal(name,phone);
+ n.value="";if(ph)ph.value="";
+ await invitePlayer(p,state.session,phone);
+}
+async function invitePlayer(p,s,phone=""){
+ const url=playerUrl(p,s);
+ const message=`QuizArena Live
+
+${url}
+
+Trykk på lenken over for å bli med.`;
+ if(phone){
+   const clean=phone.replace(/[^+0-9]/g,"");
+   const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+   const body=encodeURIComponent(message);
+   location.href=isiOS?`sms:${clean}&body=${body}`:`sms:${clean}?body=${body}`;
+   return;
+ }
+ try{
+   if(navigator.share){await navigator.share({title:"QuizArena Live",text:"QuizArena Live",url});return}
+ }catch(e){if(e?.name==="AbortError")return}
+ try{await navigator.clipboard.writeText(url);alert("Invitasjonslenken er kopiert.")}
+ catch{prompt("Kopier lenken:",url)}
+}
+
+async function hostStart(token){hostSelected="";const {error}=await sb.rpc("qa_host_start",{p_host_token:token});if(error)alert(error.message)}
+async function hostNext(token){hostSelected="";const {error}=await sb.rpc("qa_host_next",{p_host_token:token});if(error)alert(error.message)}
+async function nextRound(token){
+ const diff=state.session.difficulty||"mix";
+ let pool=QUESTIONS.filter(q=>diff==="mix"||q.difficulty===diff);while(pool.length<10)pool=pool.concat(pool);
+ pool=shuffle(pool).slice(0,10);
+ const {error}=await sb.rpc("qa_start_next_round",{p_host_token:token,p_difficulty:diff,p_time_limit:state.session.time_limit_seconds||15,p_questions:pool});
+ if(error){alert(error.message);return}
+ await sb.rpc("qa_host_start",{p_host_token:token});
+}
+async function endQuiz(token){
+ if(!confirm("Avslutte quizen?"))return;
+ const {error}=await sb.rpc("qa_end_quiz",{p_host_token:token});if(error)alert(error.message);
+ else{localStorage.removeItem("qa_host_token");location.href=location.pathname}
+}
+
+async function loadPlayer(){
+ clearInterval(poll);
+ const refresh=async()=>{
+   const {data,error}=await sb.rpc("qa_player_state",{p_code:code,p_player_token:playerToken});
+   if(error||!data){app.innerHTML=`<main class="wrap"><div class="card"><h2>Invitasjonen virker ikke</h2><p class="muted">Be quizmaster sende en ny lenke.</p></div></main>`;return}
+   const old=state?.session?.current_index;state=data;
+   if(old!==state.session.current_index){selected="";seconds=state.session.time_limit_seconds||15;startedAt=Date.now()}
+   renderPlayer();
+ };
+ await refresh();poll=setInterval(refresh,1000);
+ document.addEventListener("visibilitychange",async()=>{if(document.hidden&&state?.session?.anti_cheat_enabled){await sb.rpc("qa_flag_switch",{p_code:code,p_player_token:playerToken})}});
+}
+function renderPlayer(){
+ const s=state.session,p=state.player,q=state.question;
+ if(s.status==="lobby"){app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">QUIZARENA</div></div><div class="card center"><div style="font-size:60px">⏳</div><h2>Hei ${esc(p.name)}!</h2><p>Venter på quizmaster.</p></div></main>`;return}
+ if(s.status==="finished"||s.status==="closed"){renderResult();return}
+ if(!timer)timer=setInterval(()=>{if(state?.session?.status==="live"&&!state?.player?.answered_current&&seconds>0){seconds--;const el=document.getElementById("sec");if(el)el.textContent=seconds}},1000);
+ app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">QUIZARENA</div><p>Spørsmål ${s.current_index+1} av ${s.question_count||10}</p></div>
+ <div class="card"><div class="timer" id="sec">${seconds}</div><div class="question">${esc(q?.question||"Laster…")}</div>
+ ${(q?.options||[]).map((o,i)=>`<button class="answer ${selected===o?"sel":""}" ${p.answered_current||seconds<=0?"disabled":""} onclick='selectAnswer(${JSON.stringify(o)})'><b>${"ABCD"[i]}.</b> ${esc(o)}</button>`).join("")}
+ <button class="btn green" ${!selected||p.answered_current||seconds<=0?"disabled":""} onclick="sendAnswer()">${p.answered_current?"Svar sendt ✅":seconds<=0?"Tiden er ute":"Send svar"}</button>
+ ${p.suspicious?'<p class="center" style="color:#ffc36b">⚠️ Sidebytte er registrert.</p>':""}</div></main>`;
+}
+function selectAnswer(x){selected=x;renderPlayer()}
+async function sendAnswer(){
+ if(!selected||seconds<=0)return;
+ const ms=Math.max(0,Date.now()-startedAt);
+ const {error}=await sb.rpc("qa_submit_answer",{p_code:code,p_player_token:playerToken,p_answer:selected,p_response_ms:ms});
+ if(error)alert(error.message);
+}
+function renderResult(){
+ const p=state.player,s=state.session,review=state.review||[],wrong=review.filter(x=>!x.correct);
+ if(p.is_winner)setTimeout(celebrate,250);
+ app.innerHTML=`<main class="wrap"><div class="card center"><div class="trophy">${p.is_winner?"🏆🎉":"⭐"}</div>
+ <h1>${p.is_winner?"GRATULERER!":"Godt spilt!"}</h1><h2>${esc(p.name)}</h2>
+ <p style="font-size:24px"><b>${p.correct_count??p.score}/${s.question_count||10}</b> riktig</p><p class="muted">${p.score} poeng totalt</p><p>Plass ${p.rank} av ${p.total_players}</p>
+ ${wrong.length?`<div class="card" style="text-align:left"><h3>Feil svar (${wrong.length})</h3>${wrong.map(x=>`<p><b>${esc(x.question)}</b><br><span class="muted">Ditt svar: ${esc(x.your_answer||"Ikke besvart")}</span><br><span style="color:#91efac">Riktig: ${esc(x.correct_answer)}</span></p>`).join("<hr>")}</div>`:'<div class="card">🎯 Alt riktig!</div>'}
+ ${p.is_winner?`<div class="card"><h2>${p.wins||0} seire totalt</h2>${p.trophy_unlocked?`<div class="trophy">🏆</div><h2>Trofé låst opp!</h2><button class="btn gold" onclick="downloadTrophy()">Last ned trofé</button>`:`<p>${Math.max(0,3-(p.wins||0))} seier(e) igjen til trofé.</p>`}</div>`:""}
+ ${s.status==="closed"?'<h3>Quizen er avsluttet.</h3>':'<p class="muted">Vent på quizmaster for neste runde.</p>'}</div></main>`;
+}
+function celebrate(){
+ try{const u=new SpeechSynthesisUtterance(`Hurra! Gratulerer ${state.player.name}!`);u.lang="nb-NO";speechSynthesis.cancel();speechSynthesis.speak(u)}catch{}
+}
+function downloadTrophy(){
+ const p=state.player,c=document.createElement("canvas");c.width=1200;c.height=1500;const x=c.getContext("2d");
+ let g=x.createLinearGradient(0,0,0,1500);g.addColorStop(0,"#071522");g.addColorStop(.5,"#10425f");g.addColorStop(1,"#071522");x.fillStyle=g;x.fillRect(0,0,1200,1500);
+ x.strokeStyle="#e4b847";x.lineWidth=16;x.strokeRect(45,45,1110,1410);x.textAlign="center";x.fillStyle="#f6cf69";x.font="bold 82px Arial";x.fillText("QUIZARENA",600,190);
+ x.font="200px Arial";x.fillText("🏆",600,520);x.fillStyle="#fff";x.font="bold 88px Arial";x.fillText(p.name,600,720);x.fillStyle="#f6cf69";x.font="bold 58px Arial";x.fillText(`${p.wins} SEIRE`,600,840);
+ x.fillStyle="#fff";x.font="40px Arial";x.fillText("Gratulerer!",600,970);x.fillStyle="#f6cf69";x.font="70px Arial";x.fillText("★  ★  ★",600,1110);
+ const a=document.createElement("a");a.download=`QuizArena_Trofe_${p.name.replace(/[^\wæøåÆØÅ-]+/g,"_")}.png`;a.href=c.toDataURL("image/png");a.click();
+}
+
+if(playerToken&&code)loadPlayer();
+else if(hostParam)loadHost(hostParam);
+else home();
+</script>
+</body>
+</html>
