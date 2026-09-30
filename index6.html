@@ -600,13 +600,17 @@ function home(){
 function hostSetup(){
  const qm=getQuizmasterName();
  const savedCat=localStorage.getItem("qa_host_category")||"";
+ const draft=getInviteDraft();
  app.innerHTML=`<main class="wrap">
-   <div class="hero"><div class="logo">QuizArena</div></div>
-   <div class="card">
-     <h2>Lag eller bli med</h2>
-     ${qm?`<div class="pill">Quizmaster: ${esc(qm)}</div>`:`<label>Ditt navn</label><input id="qmname" placeholder="Navn">`}
+   <div class="hero"><div class="logo">QUIZARENA</div><p class="sub">Lag eller bli med</p></div>
 
-     <label>Kategori</label>
+   <div class="card">
+     <h2>1. Quizmaster</h2>
+     ${qm?`<div class="pill">Quizmaster: ${esc(qm)}</div>`:`<label>Ditt navn</label><input id="qmname" placeholder="Navnet ditt">`}
+   </div>
+
+   <div class="card">
+     <h2>2. Velg kategori</h2>
      <select id="hostCategory">
        <option value="" ${savedCat===""?"selected":""}>🎲 Alle kategorier</option>
        ${QA_CATEGORIES.map(([name,icon])=>`<option value="${esc(name)}" ${savedCat===name?"selected":""}>${icon} ${esc(name)}</option>`).join("")}
@@ -619,26 +623,33 @@ function hostSetup(){
        <option value="hard">⭐⭐⭐ Krevende</option>
      </select>
 
-     <div class="pill">⏱️ 15 sekunder per spørsmål</div>
-     <div class="pill">🧠 Ingen regneoppgaver</div>
-
      <label>Antall spørsmål</label>
      <select id="qcount">
        <option value="5">5 spørsmål</option>
        <option value="10" selected>10 spørsmål</option>
      </select>
-
-     <button class="btn gold" onclick="createSession()">Opprett quiz</button>
-     <button class="btn dark" onclick="home()">Tilbake</button>
    </div>
+
+   <div class="card" style="border:2px solid #2f9cff">
+     <h2>3. Inviter spiller</h2>
+     <p class="muted">Skriv navn og telefonnummer. Du kan sende invitasjonen etter at quizen er opprettet.</p>
+     <label>Navn</label>
+     <input id="setupPname" placeholder="f.eks. Petra" value="${esc(draft.name||"")}">
+     <label>Telefonnummer</label>
+     <input id="setupPphone" placeholder="+47 ..." inputmode="tel" value="${esc(draft.phone||"")}">
+   </div>
+
+   <button class="btn gold" onclick="createSession()">Opprett quiz og inviter</button>
+   <button class="btn dark" onclick="home()">Tilbake</button>
  </main>`;
 }
 async function createSession(){
  setPendingInvite(null);
+
  let qm=getQuizmasterName();
  if(!qm){
    qm=(document.getElementById("qmname")?.value||"").trim();
-   if(!qm){alert("Skriv navnet ditt én gang.");return}
+   if(!qm){alert("Skriv navnet ditt.");return}
    setQuizmasterName(qm);
  }
 
@@ -646,8 +657,11 @@ async function createSession(){
  const limit=15;
  const qcount=Number(document.getElementById("qcount")?.value||10);
  const category=document.getElementById("hostCategory")?.value||"";
+ const inviteName=(document.getElementById("setupPname")?.value||"").trim();
+ const invitePhone=(document.getElementById("setupPphone")?.value||"").trim();
 
  localStorage.setItem("qa_host_category",category);
+ setInviteDraft(inviteName,invitePhone);
 
  const pool=pickQuestionSetForCategory(diff,qcount,category);
  if(pool.length<qcount){
@@ -670,7 +684,7 @@ async function createSession(){
  });
  if(added.error){
    alert("Quiz opprettet, men quizmaster kunne ikke legges til: "+added.error.message);
-   return
+   return;
  }
 
  let me=Array.isArray(added.data)?added.data[0]:added.data;
@@ -739,11 +753,11 @@ function renderHost(token){
  if(s.status!=="live")stopHostAutoAdvance();
  if(s.status==="lobby"){
    const saved=getSavedPlayers();
-   h+=`<div class="card"><h2>Inviter spillere</h2>
+   h+=`<div class="card" style="border:2px solid #2f9cff"><h2>📨 Inviter spiller</h2>
    <p class="muted">Du er allerede med som quizmaster: <b>${esc(getQuizmasterName())}</b></p>
    ${saved.length?`<div class="muted small">Lagrede spillere</div><div>${saved.map((p,i)=>`<button class="pill" style="margin:3px" onclick="fillSavedPlayer(${i})">${esc(p.name)}</button>`).join("")}</div>`:""}
    <input id="pname" placeholder="Navn, f.eks. Petra" value="${esc(getInviteDraft().name||'')}" oninput="updateInviteDraft()"><input id="pphone" placeholder="Telefonnummer" inputmode="tel" value="${esc(getInviteDraft().phone||'')}" oninput="updateInviteDraft()">
-   <button id="qaInviteBtn" class="btn green" onclick="addAndInvite('${esc(token)}')">📨 Inviter</button></div>`;
+   <p class="muted small">Trykk Inviter for å legge til spilleren og få SMS-/deleknapp.</p><button id="qaInviteBtn" class="btn green" onclick="addAndInvite('${esc(token)}')">📨 Inviter spiller</button></div>`;
    const pending=getPendingInvite();
    if(pending){
      const smsHref=pendingSmsHref();
