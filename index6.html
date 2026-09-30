@@ -554,20 +554,35 @@ function home(){
 }
 function hostSetup(){
  const qm=getQuizmasterName();
+ const savedCat=localStorage.getItem("qa_host_category")||"";
  app.innerHTML=`<main class="wrap">
    <div class="hero"><div class="logo">QuizArena</div></div>
    <div class="card">
-     <h2>Velg vanskelighetsgrad</h2>
+     <h2>Lag eller bli med</h2>
      ${qm?`<div class="pill">Quizmaster: ${esc(qm)}</div>`:`<label>Ditt navn</label><input id="qmname" placeholder="Navn">`}
+
+     <label>Kategori</label>
+     <select id="hostCategory">
+       <option value="" ${savedCat===""?"selected":""}>🎲 Alle kategorier</option>
+       ${QA_CATEGORIES.map(([name,icon])=>`<option value="${esc(name)}" ${savedCat===name?"selected":""}>${icon} ${esc(name)}</option>`).join("")}
+     </select>
+
+     <label>Vanskelighetsgrad</label>
      <select id="diff">
        <option value="easy">⭐ Lett</option>
        <option value="mix" selected>⭐⭐ Middels / Miks</option>
        <option value="hard">⭐⭐⭐ Krevende</option>
      </select>
+
      <div class="pill">⏱️ 15 sekunder per spørsmål</div>
      <div class="pill">🧠 Ingen regneoppgaver</div>
+
      <label>Antall spørsmål</label>
-     <select id="qcount"><option value="5">5 spørsmål</option><option value="10" selected>10 spørsmål</option></select>
+     <select id="qcount">
+       <option value="5">5 spørsmål</option>
+       <option value="10" selected>10 spørsmål</option>
+     </select>
+
      <button class="btn gold" onclick="createSession()">Opprett quiz</button>
      <button class="btn dark" onclick="home()">Tilbake</button>
    </div>
@@ -580,18 +595,42 @@ async function createSession(){
    if(!qm){alert("Skriv navnet ditt én gang.");return}
    setQuizmasterName(qm);
  }
+
  const diff=document.getElementById("diff").value;
  const limit=15;
  const qcount=Number(document.getElementById("qcount")?.value||10);
- const pool=pickQuestionSetForCategory(diff,qcount,"");
- const {data,error}=await sb.rpc("qa_create_session",{p_difficulty:diff,p_time_limit:limit,p_questions:pool});
+ const category=document.getElementById("hostCategory")?.value||"";
+
+ localStorage.setItem("qa_host_category",category);
+
+ const pool=pickQuestionSetForCategory(diff,qcount,category);
+ if(pool.length<qcount){
+   alert("For få spørsmål i denne kategorien ennå.");
+   return;
+ }
+
+ const {data,error}=await sb.rpc("qa_create_session",{
+   p_difficulty:diff,
+   p_time_limit:limit,
+   p_questions:pool
+ });
  if(error){alert("Kunne ikke opprette quiz: "+error.message);return}
+
  const hostToken=data.host_token;
- const added=await sb.rpc("qa_add_player_live",{p_host_token:hostToken,p_name:qm,p_phone:null});
- if(added.error){alert("Quiz opprettet, men quizmaster kunne ikke legges til: "+added.error.message);return}
+ const added=await sb.rpc("qa_add_player_live",{
+   p_host_token:hostToken,
+   p_name:qm,
+   p_phone:null
+ });
+ if(added.error){
+   alert("Quiz opprettet, men quizmaster kunne ikke legges til: "+added.error.message);
+   return
+ }
+
  let me=Array.isArray(added.data)?added.data[0]:added.data;
  if(me?.player && !me.player_token)me=me.player;
  if(me?.player_token)setHostPlayerToken(me.player_token);
+
  localStorage.setItem("qa_host_token",hostToken);
  location.href=location.pathname+"?host="+encodeURIComponent(hostToken);
 }
@@ -650,7 +689,7 @@ function stopHostAutoAdvance(){
 function renderHost(token){
  const s=state.session,ps=state.players||[];
  let h=`<main class="wrap"><div class="hero"><div class="logo">👑 QUIZARENA</div></div>
- <div class="card"><div class="row"><div><div class="muted">Quizkode</div><div class="code">${esc(s.code)}</div></div><div><div class="muted">Runde</div><h2>${s.round_no||1}/10</h2></div></div></div>`;
+ <div class="card"><div class="row"><div><div class="muted">Quizkode</div><div class="code">${esc(s.code)}</div></div><div><div class="muted">Runde</div><h2>${s.round_no||1}/10</h2></div></div></div><div class="card center"><span class="pill">📖 ${esc(localStorage.getItem("qa_host_category")||"Alle kategorier")}</span></div>`;
  if(s.status!=="live")stopHostAutoAdvance();
  if(s.status==="lobby"){
    const saved=getSavedPlayers();
@@ -744,9 +783,19 @@ async function hostNext(token){if(hostAutoTimer)clearTimeout(hostAutoTimer);host
 async function nextRound(token){
  const diff=state.session.difficulty||"mix";
  const count=state.session.question_count||10;
- const pool=pickQuestionSetForCategory(diff,count,"");
+ const category=localStorage.getItem("qa_host_category")||"";
+ const pool=pickQuestionSetForCategory(diff,count,category);
+
+ if(pool.length<count){
+   alert("For få spørsmål i denne kategorien ennå.");
+   return;
+ }
+
  const {error}=await sb.rpc("qa_start_next_round",{
-   p_host_token:token,p_difficulty:diff,p_time_limit:15,p_questions:pool
+   p_host_token:token,
+   p_difficulty:diff,
+   p_time_limit:15,
+   p_questions:pool
  });
  if(error){alert(error.message);return}
  await sb.rpc("qa_host_start",{p_host_token:token});

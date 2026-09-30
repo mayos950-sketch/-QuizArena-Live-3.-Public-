@@ -1,4 +1,4 @@
-const CACHE="quizarena-20260930-force2";
+const CACHE="quizarena-multiplayer-category-fixed-1";
 const ASSETS=["./","./index.html","./index6.html?v=20260930-force2","./manifest.webmanifest?v=20260930-force2","./icon-192.png","./icon-512.png"];
 self.addEventListener("install",event=>{
   self.skipWaiting();
