@@ -226,6 +226,16 @@ body[data-qa-theme="futurama"] .btn.gold{background:linear-gradient(180deg,#ffe4
 body[data-qa-theme="futurama"] .btn.dark{background:linear-gradient(180deg,#c84488,#76285a)}
 body[data-qa-theme="futurama"] .answer{background:linear-gradient(180deg,#0e4a51,#082e33);border-color:#31d9d3}
 body[data-qa-theme="futurama"] .category-card{background:linear-gradient(145deg,#135964,#24163d);border-color:#54e7dd}
+
+.war-category{
+  grid-column:1/-1;
+  min-height:118px;
+  border:2px solid #c5a45b;
+  background:
+    radial-gradient(circle at 50% 15%,rgba(199,161,85,.24),transparent 34%),
+    linear-gradient(180deg,#4a4b3d,#1e2119) !important;
+}
+.war-category .category-name{font-size:19px;color:#f3dfad}
 </style>
 
 </head>
@@ -358,9 +368,17 @@ function pickQuestionSet(diff,count){
 
 
 const QA_CATEGORIES=[
-  ["Geografi","🗺️"],["Historie","🏛️"],["Natur","🌲"],["Dyr","🐺"],["Vitenskap","🧪"],
-  ["Sport","⚽"],["Kultur","🎭"],["Film & Serier","🎬"],["Mat & Drikke","🍔"],["Allmennkunnskap","💡"],
-  ["1. og 2. verdenskrig","🪖"]
+  ["Geografi","🗺️"],
+  ["Historie","🏛️"],
+  ["1. og 2. verdenskrig","🪖"],
+  ["Natur","🌲"],
+  ["Dyr","🐺"],
+  ["Vitenskap","🧪"],
+  ["Sport","⚽"],
+  ["Kultur","🎭"],
+  ["Film & Serier","🎬"],
+  ["Mat & Drikke","🍔"],
+  ["Allmennkunnskap","💡"]
 ];
 let qaSelectedCategory=localStorage.getItem("qa_selected_category")||"";
 function setQuizCategory(cat){
@@ -391,9 +409,9 @@ function pickQuestionSetForCategory(diff,count,category){
 function categoryScreen(){
   app.innerHTML=`<main class="wrap category-screen">
     <div class="hero"><div class="crown-mark small-crown">👑</div><div class="logo">QUIZARENA</div></div>
-    <div class="category-title"><h2>Velg kategori</h2><p>${QA_CATEGORIES.length} kategorier</p></div>
+    <div class="category-title"><h2>Velg kategori</h2><p>${QA_CATEGORIES.length} kategorier · inkl. 1. og 2. verdenskrig</p></div>
     <div class="category-grid">
-      ${QA_CATEGORIES.map(([name,icon],i)=>`<button type="button" class="category-card" data-cat-index="${i}">
+      ${QA_CATEGORIES.map(([name,icon],i)=>`<button type="button" class="category-card ${name==='1. og 2. verdenskrig'?'war-category':''}" data-cat-index="${i}">
         <div class="category-icon">${icon}</div><div class="category-name">${esc(name)}</div>
       </button>`).join("")}
       <button type="button" class="category-card all" id="qaAllCategories">
@@ -493,7 +511,7 @@ function settingsScreen(){
   app.innerHTML=`<main class="wrap">
     <div class="hero"><div class="crown-mark small-crown">👑</div><div class="logo">QUIZARENA</div></div>
     <div class="card">
-      <h2>Innstillinger</h2>
+      <h2>Innstillinger</h2><div class="pill">Ny versjon · Themes aktiv</div>
       <p class="muted">Velg bare utseendet. Spillreglene endres ikke.</p>
       <div class="theme-grid">
         ${QA_THEMES.map(([id,name,icon,note])=>`<button type="button" class="theme-choice ${current===id?"selected":""}" data-theme-id="${id}">
