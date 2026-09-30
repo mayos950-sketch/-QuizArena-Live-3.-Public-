@@ -154,6 +154,19 @@ const app=document.getElementById("app");
 const params=new URLSearchParams(location.search);
 const playerToken=params.get("token"), code=params.get("code"), hostParam=params.get("host");
 let poll=null,timer=null,state=null,selected="",seconds=15,startedAt=0;
+
+let qaAudioCtx=null;
+function unlockQuizAudio(){
+  try{
+    if(!qaAudioCtx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(AC) qaAudioCtx=new AC();
+    }
+    if(qaAudioCtx?.state==="suspended") qaAudioCtx.resume();
+  }catch{}
+}
+document.addEventListener("pointerdown",unlockQuizAudio,{once:true});
+
 let hostAutoTimer=null,hostAutoKey="";
 
 const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
@@ -377,7 +390,7 @@ async function createSession(){
 
 let hostSelected="";
 function hostPick(ans){ hostSelected=ans; renderHost(localStorage.getItem("qa_host_token")||hostParam); }
-async function hostSendAnswer(){
+async function hostSendAnswer(){unlockQuizAudio();
  const tok=getHostPlayerToken();
  if(!tok||!hostSelected||!state?.session?.code)return;
  const {error}=await sb.rpc("qa_submit_answer",{
@@ -518,7 +531,7 @@ Trykk på lenken over for å bli med.`;
  catch{prompt("Kopier lenken:",url)}
 }
 
-async function hostStart(token){hostSelected="";const {error}=await sb.rpc("qa_host_start",{p_host_token:token});if(error)alert(error.message)}
+async function hostStart(token){unlockQuizAudio();hostSelected="";const {error}=await sb.rpc("qa_host_start",{p_host_token:token});if(error)alert(error.message)}
 async function hostNext(token){if(hostAutoTimer)clearTimeout(hostAutoTimer);hostAutoTimer=null;hostSelected="";const {error}=await sb.rpc("qa_host_next",{p_host_token:token});if(error)alert(error.message)}
 async function nextRound(token){
  const diff=state.session.difficulty||"mix";
@@ -567,7 +580,7 @@ function renderPlayer(){
  ${p.suspicious?'<p class="center" style="color:#ffc36b">⚠️ Sidebytte er registrert.</p>':""}</div></main>`;
 }
 function selectAnswer(x){selected=x;renderPlayer()}
-async function sendAnswer(){
+async function sendAnswer(){unlockQuizAudio();
  if(!selected||seconds<=0)return;
  const ms=Math.max(0,Date.now()-startedAt);
  const {error}=await sb.rpc("qa_submit_answer",{p_code:code,p_player_token:playerToken,p_answer:selected,p_response_ms:ms});
@@ -585,8 +598,58 @@ function renderResult(){
  <button id="qaSoloAfter" class="btn gold" onclick="soloHome()">🎮 Spill alene</button>
  </div></main>`;
 }
+function playWinnerFanfare(){
+  try{
+    unlockQuizAudio();
+    const ctx=qaAudioCtx;
+    if(!ctx)return;
+    const now=ctx.currentTime+0.03;
+
+    // Short original trumpet-style fanfare made with WebAudio.
+    const notes=[
+      [523.25,0.00,0.20], [659.25,0.20,0.20], [783.99,0.40,0.28],
+      [1046.50,0.72,0.22], [783.99,0.98,0.18], [1046.50,1.18,0.48]
+    ];
+
+    notes.forEach(([freq,start,dur],i)=>{
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.type=i<3?"square":"sawtooth";
+      osc.frequency.setValueAtTime(freq,now+start);
+      gain.gain.setValueAtTime(0.0001,now+start);
+      gain.gain.exponentialRampToValueAtTime(0.16,now+start+0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001,now+start+dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now+start);
+      osc.stop(now+start+dur+0.03);
+    });
+
+    // Low ceremonial hit.
+    const bass=ctx.createOscillator(), bg=ctx.createGain();
+    bass.type="sine";
+    bass.frequency.setValueAtTime(130.81,now+0.70);
+    bg.gain.setValueAtTime(0.0001,now+0.70);
+    bg.gain.exponentialRampToValueAtTime(0.11,now+0.73);
+    bg.gain.exponentialRampToValueAtTime(0.0001,now+1.55);
+    bass.connect(bg).connect(ctx.destination);
+    bass.start(now+0.70); bass.stop(now+1.58);
+  }catch{}
+}
+
 function celebrate(){
- try{const u=new SpeechSynthesisUtterance(`Hurra! Gratulerer ${state.player.name}!`);u.lang="nb-NO";speechSynthesis.cancel();speechSynthesis.speak(u)}catch{}
+  playWinnerFanfare();
+  setTimeout(()=>{
+    try{
+      const name=state?.player?.name||"";
+      const u=new SpeechSynthesisUtterance(`HURRA! Gratulerer ${name}!`);
+      u.lang="nb-NO";
+      u.rate=0.95;
+      u.pitch=1.15;
+      u.volume=1;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }catch{}
+  },450);
 }
 function downloadTrophy(){
  const p=state.player,c=document.createElement("canvas");c.width=1200;c.height=1500;const x=c.getContext("2d");
@@ -624,7 +687,7 @@ function soloHome(){
   </main>`;
 }
 
-function startSolo(){
+function startSolo(){unlockQuizAudio();
   const diff=document.getElementById("soloDiff")?.value||"mix";
   const count=Number(document.getElementById("soloCount")?.value||10);
   const pool=pickQuestionSet(diff,count);
