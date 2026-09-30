@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#071321">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>QuizArena Live</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+ --bg:#040a11;--panel:#0a1624;--panel2:#0f2438;--text:#f8fbff;--muted:#9db1c2;
+ --blue:#138fe9;--green:#14c96b;--gold:#ffc63d;--red:#ff4a51;--line:#214058;
+ --purple:#7b4dff;--orange:#ff9f22;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:
+radial-gradient(circle at 50% -15%,#1c4f79 0,#0b1c2b 28%,#050b12 60%,#020508 100%);
+color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+body{min-height:100vh;overflow-x:hidden}
+body:before{
+ content:"";position:fixed;inset:0;pointer-events:none;opacity:.24;
+ background:
+ radial-gradient(circle at 10% 18%,#2f9cff44 0 2px,transparent 3px),
+ radial-gradient(circle at 80% 12%,#ffd55a44 0 2px,transparent 3px),
+ linear-gradient(120deg,transparent 0 46%,#ffffff08 47% 48%,transparent 49% 100%);
+ background-size:110px 90px,130px 100px,100% 100%;
+}
+.wrap{max-width:720px;margin:auto;padding:14px 14px 30px;position:relative}
+.hero{text-align:center;padding:8px 0 12px}
+.logo{
+ display:inline-block;font-weight:1000;font-size:38px;letter-spacing:-1.5px;
+ color:#ffd44f;text-shadow:0 3px 0 #6f4b00,0 0 26px #ffbd2c88,0 10px 30px #000;
+}
+.logo:before{content:"👑";display:block;font-size:46px;line-height:.8;margin-bottom:-4px}
+.sub{color:#d9e4ec;margin:.35rem 0 0;font-weight:600}
+.card{
+ background:linear-gradient(180deg,rgba(15,38,58,.96),rgba(7,20,31,.98));
+ border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:16px;margin:12px 0;
+ box-shadow:0 14px 36px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.04)
+}
+.btn{
+ width:100%;padding:15px 16px;border:0;border-radius:15px;margin:7px 0;font-size:17px;font-weight:850;color:white;
+ background:linear-gradient(180deg,#219ff2,#0873c4);box-shadow:inset 0 1px rgba(255,255,255,.22),0 7px 18px rgba(0,0,0,.25)
+}
+.btn:active{transform:translateY(1px)} .btn:disabled{opacity:.45}
+.green{background:linear-gradient(180deg,#20df79,#078e43)}
+.gold{background:linear-gradient(180deg,#ffe582,#dea21f);color:#18222a}
+.dark{background:linear-gradient(180deg,#294c66,#143147)}
+.danger{background:linear-gradient(180deg,#ff666d,#c83039)}
+input,select{
+ width:100%;padding:14px;border-radius:14px;border:1px solid #2d526d;background:#071722;color:white;margin:6px 0;font-size:16px
+}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.muted{color:var(--muted)}.center{text-align:center}
+.code{font-size:32px;font-weight:1000;letter-spacing:4px;color:var(--gold)}
+.question{
+ font-size:24px;line-height:1.23;margin:14px 0 16px;text-align:center;font-weight:850;
+ text-shadow:0 2px 8px #000
+}
+.answer-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.answer{
+ width:100%;min-height:84px;padding:13px;border:0;border-radius:16px;color:white;text-align:left;font-size:16px;font-weight:800;
+ box-shadow:inset 0 1px rgba(255,255,255,.22),0 7px 16px rgba(0,0,0,.28)
+}
+.answer:nth-child(1){background:linear-gradient(180deg,#238ee8,#1166bd)}
+.answer:nth-child(2){background:linear-gradient(180deg,#f45159,#c92f38)}
+.answer:nth-child(3){background:linear-gradient(180deg,#f0b728,#cd8c12)}
+.answer:nth-child(4){background:linear-gradient(180deg,#24c66f,#0d8e45)}
+.answer.sel{outline:4px solid #fff;filter:brightness(1.12)}
+.timer-wrap{display:flex;justify-content:center;margin:8px 0 4px}
+.timer{
+ width:72px;height:72px;border:5px solid var(--red);border-radius:50%;display:grid;place-items:center;
+ font-size:29px;font-weight:1000;background:#09141f;box-shadow:0 0 18px #ff465544
+}
+.topbar{
+ display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;
+ color:#dce7ef;font-size:14px;font-weight:700
+}
+.badge,.pill{
+ display:inline-block;padding:6px 10px;border-radius:999px;background:#17384f;color:#e7f2f8;font-size:13px;border:1px solid #2a5874
+}
+.saved-row{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 12px}
+.saved-player{border:0;cursor:pointer;background:#183a54;color:#fff;padding:8px 12px;border-radius:999px;font-weight:700}
+table{width:100%;border-collapse:collapse}td{padding:11px 5px;border-bottom:1px solid rgba(255,255,255,.09)}
+.rank{font-size:21px}.winner{background:rgba(255,198,75,.11)}
+.trophy{font-size:84px}
+.score-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.score-box{background:#081824;border:1px solid #204157;border-radius:14px;padding:10px;text-align:center}
+.score-box b{display:block;font-size:21px;color:#ffd44f}
+hr{border:0;border-top:1px solid rgba(255,255,255,.1)}
+.small{font-size:13px}
+@media(max-width:520px){
+ .wrap{padding:8px 10px 24px}.logo{font-size:34px}.logo:before{font-size:40px}
+ .question{font-size:22px}.answer{min-height:78px;font-size:15px;padding:12px}
+ .card{border-radius:18px;padding:14px}.btn{font-size:16px}
+}
+
+.winner-burst{
+ border:2px solid #d8a526;
+ box-shadow:0 0 40px rgba(255,198,61,.35),0 15px 40px rgba(0,0,0,.45);
+ animation:winnerPulse 1s ease-in-out infinite alternate;
+}
+@keyframes winnerPulse{from{transform:scale(1)}to{transform:scale(1.015)}}
+</style>
+<style>
+.big-home{font-size:20px;padding:18px 16px}
+.arena-card{background:
+ radial-gradient(circle at 50% 0,#173f65 0,transparent 48%),
+ linear-gradient(180deg,#0e2539,#07131f)}
+.trophy-home{border-color:#8c681e}
+.topbar{min-height:46px;font-size:18px}
+.back-btn{width:42px;height:42px;border:0;border-radius:13px;background:#0d2335;color:white;font-size:34px;line-height:34px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 14px}
+.seg button{padding:12px;border-radius:13px;border:1px solid #2a5270;background:#0d2233;color:white;font-weight:800}
+.seg .seg-on{background:linear-gradient(#ffe98c,#e8ae27);color:#1d2024}
+.category-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cat{height:116px;border-radius:17px;border:1px solid #2d5877;background:
+ radial-gradient(circle at 50% 15%,#25567b 0,#0c263a 55%,#06131e 100%);
+ color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ box-shadow:0 9px 20px rgba(0,0,0,.32);font-size:15px}
+.cat span{font-size:42px;display:block;margin-bottom:7px}
+.difficulty-card{display:grid;gap:12px;margin-top:20px}
+.difficulty{border:0;border-radius:18px;min-height:78px;color:white;font-weight:950;font-size:21px;box-shadow:0 9px 22px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.28)}
+.difficulty.easy{background:linear-gradient(#26d75c,#078438)}
+.difficulty.medium{background:linear-gradient(#ffae27,#df6f09)}
+.difficulty.hard{background:linear-gradient(#f14f49,#b92125)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const SUPABASE_URL="https://yqwfvdicuacvawwndpuz.supabase.co";
+const SUPABASE_KEY="sb_publishable_pAKBRapvgeV7XQMGcYgNEA_i5KhtiDe";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const QUESTIONS=[
+{difficulty:"easy",question:"Hva heter hovedstaden i Norge?",options:["Oslo","Bergen","Trondheim","Stavanger"],correct:"Oslo"},
+{difficulty:"easy",question:"Hva er hovedstaden i Sverige?",options:["Stockholm","Göteborg","Malmö","Uppsala"],correct:"Stockholm"},
+{difficulty:"easy",question:"Hvem malte «Skrik»?",options:["Edvard Munch","Harald Sohlberg","Christian Krohg","Theodor Kittelsen"],correct:"Edvard Munch"},
+{difficulty:"easy",question:"Hvilken planet er nærmest solen?",options:["Merkur","Venus","Mars","Jorden"],correct:"Merkur"},
+{difficulty:"easy",question:"Hvor mange spillere har et fotballag på banen samtidig?",options:["11","9","10","12"],correct:"11"},
+{difficulty:"easy",question:"Hva heter Norges lengste elv?",options:["Glomma","Lågen","Numedalslågen","Tana"],correct:"Glomma"},
+{difficulty:"easy",question:"Hvilket dyr er størst på land?",options:["Afrikansk elefant","Neshorn","Flodhest","Sjiraff"],correct:"Afrikansk elefant"},
+{difficulty:"easy",question:"Hvor mange kontinenter regnes vanligvis?",options:["7","5","6","8"],correct:"7"},
+{difficulty:"easy",question:"Hva er kjemisk symbol for gull?",options:["Au","Ag","Fe","Gd"],correct:"Au"},
+{difficulty:"easy",question:"Hvilket hav ligger mellom Europa og Amerika?",options:["Atlanterhavet","Stillehavet","Indiahavet","Nordishavet"],correct:"Atlanterhavet"},
+{difficulty:"easy",question:"Hva er 12 × 12?",options:["144","124","132","154"],correct:"144"},
+{difficulty:"easy",question:"Hvor mange dager har et skuddår?",options:["366","365","364","367"],correct:"366"},
+{difficulty:"hard",question:"Hvilket land har hovedstaden Astana?",options:["Kasakhstan","Usbekistan","Kirgisistan","Mongolia"],correct:"Kasakhstan"},
+{difficulty:"hard",question:"Hvilket grunnstoff har atomnummer 74?",options:["Wolfram","Titan","Kobolt","Molybden"],correct:"Wolfram"},
+{difficulty:"hard",question:"Hvilket år ble unionen mellom Norge og Sverige oppløst?",options:["1905","1814","1918","1945"],correct:"1905"},
+{difficulty:"hard",question:"Hvilken norsk forfatter fikk Nobelprisen i litteratur i 1920?",options:["Knut Hamsun","Sigrid Undset","Bjørnstjerne Bjørnson","Jon Fosse"],correct:"Knut Hamsun"},
+{difficulty:"hard",question:"Hva er hovedstaden i Bhutan?",options:["Thimphu","Kathmandu","Dhaka","Colombo"],correct:"Thimphu"},
+{difficulty:"hard",question:"Hvilken planet har den korteste dagen?",options:["Jupiter","Saturn","Mars","Neptun"],correct:"Jupiter"},
+{difficulty:"hard",question:"Hvilket år falt Berlinmuren?",options:["1989","1991","1987","1990"],correct:"1989"},
+{difficulty:"hard",question:"Hva er SI-enheten for elektrisk motstand?",options:["Ohm","Volt","Ampere","Watt"],correct:"Ohm"},
+{difficulty:"hard",question:"Hvilket språk har flest morsmålsbrukere i verden?",options:["Mandarin-kinesisk","Engelsk","Spansk","Hindi"],correct:"Mandarin-kinesisk"},
+{difficulty:"hard",question:"Hvilket grunnstoff har symbolet Sb?",options:["Antimon","Sølv","Tinn","Selen"],correct:"Antimon"},
+{difficulty:"hard",question:"Hva heter den største månen til Saturn?",options:["Titan","Europa","Ganymedes","Triton"],correct:"Titan"},
+{difficulty:"hard",question:"Hvilken norsk polfarer nådde Sørpolen først?",options:["Roald Amundsen","Fridtjof Nansen","Otto Sverdrup","Helge Ingstad"],correct:"Roald Amundsen"}
+];
+
+const app=document.getElementById("app");
+const params=new URLSearchParams(location.search);
+const playerToken=params.get("token"), code=params.get("code"), hostParam=params.get("host");
+let poll=null,timer=null,state=null,selected="",seconds=15,startedAt=0;
+
+const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const shuffle=a=>[...a].sort(()=>Math.random()-.5);
+
+function getSavedPlayers(){
+  try{return JSON.parse(localStorage.getItem("qa_saved_players")||"[]")}catch{return []}
+}
+function savePlayerLocal(name,phone){
+  const n=(name||"").trim(); if(!n)return;
+  const list=getSavedPlayers().filter(x=>(x.name||"").toLowerCase()!==n.toLowerCase());
+  list.unshift({name:n,phone:(phone||"").trim()});
+  localStorage.setItem("qa_saved_players",JSON.stringify(list.slice(0,12)));
+}
+function fillSavedPlayer(i){
+  const p=getSavedPlayers()[i]; if(!p)return;
+  const n=document.getElementById("pname"), ph=document.getElementById("pphone");
+  if(n)n.value=p.name||"";
+  if(ph)ph.value=p.phone||"";
+}
+
+function appBaseUrl(){
+ const path=location.pathname.replace(/index6\.html$/i,"");
+ return `${location.origin}${path}`;
+}
+function playerUrl(p,s){return `${appBaseUrl()}?code=${encodeURIComponent(s.code)}&token=${encodeURIComponent(p.player_token)}`}
+
+function home(){
+ localStorage.removeItem("qa_host_token");
+ app.innerHTML=`<main class="wrap">
+ <div class="hero">
+   <div class="logo">QUIZARENA</div>
+   <p class="sub">🇳🇴 Norge & Verden</p>
+   <p class="muted">10 spørsmål · Live med venner</p>
+ </div>
+ <div class="card arena-card">
+   <button class="btn gold big-home" onclick="hostSetup()">⚔️ Spill nå</button>
+   <button class="btn" onclick="hostSetup()">👥 Lag eller bli med</button><button class="btn gold" onclick="soloHome()">🎮 Spill alene</button>
+   <button class="btn dark" onclick="categoryScreen()">📖 Velg kategori</button>
+   <button class="btn dark" onclick="statsScreen()">📊 Statistikk</button>
+   <button class="btn dark" onclick="settingsScreen()">⚙️ Innstillinger</button>
+ </div>
+ <div class="card center trophy-home">
+   <div style="font-size:52px">🏆</div>
+   <b>3 seire = personlig vinnerpokal</b>
+   <p class="muted small">Samle seire og lås opp ditt eget QuizArena-trofé.</p>
+ </div>
+ </main>`;
+}
+
+function categoryScreen(){
+ app.innerHTML=`<main class="wrap">
+ <div class="topbar"><button class="back-btn" onclick="home()">‹</button><b>Velg kategori</b><span>🏠</span></div>
+ <div class="seg"><button class="seg-on">Norge</button><button>Verden</button><button>Mix</button></div>
+ <div class="category-grid">
+ ${[
+ ["🏔️","Geografi"],["⛵","Historie"],["🫎","Natur"],["🦅","Dyr"],
+ ["🔬","Vitenskap"],["⚽","Sport"],["🏰","Kultur"],["🎬","Film & Serier"],
+ ["🍣","Mat & Drikke"],["💡","Allmennkunnskap"]
+ ].map(x=>`<button class="cat" onclick="hostSetup()"><span>${x[0]}</span><b>${x[1]}</b></button>`).join("")}
+ </div></main>`;
+}
+function statsScreen(){
+ const saved=getSavedPlayers();
+ app.innerHTML=`<main class="wrap">
+ <div class="topbar"><button class="back-btn" onclick="home()">‹</button><b>Min statistikk</b><span>🏆</span></div>
+ <div class="card center"><div style="font-size:64px">👤</div><h2>QuizArena</h2><span class="pill">Spillerprofil</span><p class="muted small">${rewardText(Number(localStorage.getItem("qa_solo_wins")||0))}</p></div>
+ <div class="score-strip">
+   <div class="score-box"><b>${Number(localStorage.getItem("qa_solo_wins")||0)}</b><span class="muted small">Solo-seire</span></div>
+   <div class="score-box"><b>${saved.length}</b><span class="muted small">Lagrede spillere</span></div>
+   <div class="score-box"><b>${Number(localStorage.getItem("qa_solo_games")||0)}</b><span class="muted small">Solo-spill</span></div>
+ </div>
+ ${saved.length?`<div class="card"><h3>Lagrede spillere</h3>${saved.map(p=>`<div style="padding:8px 0"><b>${esc(p.name)}</b>${p.phone?` <span class="muted">${esc(p.phone)}</span>`:""}</div>`).join("<hr>")}</div>`:""}
+ </main>`;
+}
+function settingsScreen(){
+ app.innerHTML=`<main class="wrap">
+ <div class="topbar"><button class="back-btn" onclick="home()">‹</button><b>Innstillinger</b><span>⚙️</span></div>
+ <div class="card"><label>Standard tid</label><select><option>10 sek</option><option selected>15 sek</option><option>20 sek</option></select>
+ <label>Standard vanskelighetsgrad</label><select><option>Lett</option><option selected>Miks</option><option>Krevende</option></select></div>
+ </main>`;
+}
+
+function hostSetup(){
+ app.innerHTML=`<main class="wrap">
+ <div class="topbar"><button class="back-btn" onclick="home()">‹</button><b>Velg vanskelighetsgrad</b><span>👑</span></div>
+ <div class="difficulty-card">
+   <button class="difficulty easy" onclick="chooseDifficulty('easy')">⭐ Lett</button>
+   <button class="difficulty medium" onclick="chooseDifficulty('mix')">⭐⭐ Middels</button>
+   <button class="difficulty hard" onclick="chooseDifficulty('hard')">⭐⭐⭐ Krevende</button>
+ </div>
+ </main>`;
+}
+function chooseDifficulty(diff){
+ app.innerHTML=`<main class="wrap">
+ <div class="topbar"><button class="back-btn" onclick="hostSetup()">‹</button><b>Quizoppsett</b><span>⏱️</span></div>
+ <div class="card">
+   <input type="hidden" id="diff" value="${diff}">
+   <label>Tid per spørsmål</label>
+   <select id="limit"><option>10</option><option selected>15</option><option>20</option></select>
+   <p class="muted small">10 spørsmål per runde</p>
+   <button class="btn green" onclick="createSession()">Start lobby</button>
+ </div></main>`;
+}
+
+async function createSession(){
+ const diff=document.getElementById("diff").value,limit=Number(document.getElementById("limit").value);
+ let pool=QUESTIONS.filter(q=>diff==="mix"||q.difficulty===diff);
+ while(pool.length<10) pool=pool.concat(pool);
+ pool=shuffle(pool).slice(0,10);
+ const {data,error}=await sb.rpc("qa_create_session",{p_difficulty:diff,p_time_limit:limit,p_questions:pool});
+ if(error){alert("Kunne ikke opprette quiz: "+error.message);return}
+ localStorage.setItem("qa_host_token",data.host_token);
+ location.href=location.pathname+"?host="+encodeURIComponent(data.host_token);
+}
+async function loadHost(token){
+ clearInterval(poll);
+ const refresh=async()=>{
+   const {data,error}=await sb.rpc("qa_host_state",{p_host_token:token});
+   if(error||!data){app.innerHTML=`<main class="wrap"><div class="card"><h2>Kunne ikke hente quizen.</h2><button class="btn" onclick="location.href=location.pathname">Nytt spill</button></div></main>`;return}
+   state=data;
+   const a=document.activeElement;
+   if(!(a&&["pname","pphone"].includes(a.id))) renderHost(token);
+ };
+ await refresh();poll=setInterval(refresh,1000);
+}
+function renderHost(token){
+ const s=state.session,ps=state.players||[];
+ let h=`<main class="wrap"><div class="hero"><div class="logo">👑 QUIZARENA</div></div>
+ <div class="card"><div class="row"><div><div class="muted">Quizkode</div><div class="code">${esc(s.code)}</div></div><div><div class="muted">Runde</div><h2>${s.round_no||1}/10</h2></div></div></div>`;
+ if(s.status==="lobby"){
+   const saved=getSavedPlayers();
+   h+=`<div class="card"><h2>Spill med venner</h2>
+   ${saved.length?`<div class="muted small">Lagrede spillere</div><div class="saved-row">${saved.map((p,i)=>`<button class="saved-player" onclick="fillSavedPlayer(${i})">${esc(p.name)}</button>`).join("")}</div>`:""}
+   <input id="pname" placeholder="Navn, f.eks. Petra">
+   <input id="pphone" placeholder="Telefonnummer (valgfritt)" inputmode="tel">
+   <button class="btn green" onclick="addAndInvite('${esc(token)}')">📨 Inviter</button>
+   <button class="btn dark" onclick="playMyself('${esc(token)}')">🎮 Jeg spiller også</button></div>`;
+   h+=`<div class="card"><h3>Spillere (${ps.length}/10)</h3>${ps.length?ps.map(p=>`<div style="padding:10px 0"><b>${esc(p.name)}</b> <span class="muted">${esc(p.phone||"")}</span>
+   <div><span class="pill">${p.wins||0} seire</span> ${p.trophy_unlocked?'<span class="pill">🏆 Trofé</span>':''}</div></div>`).join("<hr>"):'<p class="muted">Ingen spillere ennå. Legg til navn og telefonnummer.</p>'}</div>`;
+   h+=`<button class="btn green" ${ps.length?"":"disabled"} onclick="hostStart('${esc(token)}')">Start spørsmål 1</button>`;
+ }else if(s.status==="live"){
+   const answered=ps.filter(p=>p.answered_current).length;
+   h+=`<div class="card center"><h2>Spørsmål ${(s.current_index||0)+1} av ${s.question_count||10}</h2><p>${answered}/${ps.length} har svart</p></div>`;
+   h+=`<div class="card"><h3>Spillere</h3>${ps.map(p=>`<div class="row" style="margin:9px 0"><span>${p.suspicious?"🚩 ":""}${esc(p.name)}</span><span style="text-align:right">${p.answered_current?"✅":"⏳"} ${p.tab_switch_count?`⚠️${p.tab_switch_count}`:""}</span></div>`).join("")}</div>`;
+   h+=`<button class="btn gold" onclick="hostNext('${esc(token)}')">${s.current_index===(s.question_count||10)-1?"Vis resultat":"Neste spørsmål"}</button>`;
+ }else{
+   const sorted=[...ps].sort((a,b)=>b.score-a.score);
+   h+=`<div class="card center"><div class="trophy">🏆</div><h1>Runde ${s.round_no||1} ferdig!</h1>
+   <table><tbody>${sorted.map((p,i)=>`<tr class="${i===0?"winner":""}"><td class="rank">${i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}</td><td>${esc(p.name)}</td><td><b>${p.score}/${s.question_count||10}</b></td></tr>`).join("")}</tbody></table></div>
+   ${s.round_no<10?`<button class="btn green" onclick="nextRound('${esc(token)}')">Neste runde</button>`:""}
+   <button class="btn danger" onclick="endQuiz('${esc(token)}')">Avslutt quiz</button>`;
+ }
+ app.innerHTML=h+"</main>";
+}
+
+async function addAndInvite(token){
+ const n=document.getElementById("pname"),ph=document.getElementById("pphone");
+ const name=n?.value.trim()||"",phone=ph?.value.trim()||"";
+ if(!name){alert("Skriv inn navn først.");return}
+ const {data,error}=await sb.rpc("qa_add_player_live",{p_host_token:token,p_name:name,p_phone:phone||null});
+ if(error){alert("Kunne ikke legge til spiller: "+error.message);return}
+ let p=data;
+ if(Array.isArray(p))p=p[0];
+ if(p?.player && !p.player_token)p=p.player;
+ if(!p?.player_token){
+   const st=await sb.rpc("qa_host_state",{p_host_token:token});
+   p=(st.data?.players||[]).filter(x=>x.name===name).slice(-1)[0];
+ }
+ if(!p?.player_token){alert("Invitasjonen kunne ikke opprettes. Prøv igjen.");return}
+ n.value="";if(ph)ph.value="";
+ await invitePlayer(p,state.session,phone);
+}
+async function invitePlayer(p,s,phone=""){
+ const url=playerUrl(p,s);
+ const message=`QuizArena Live
+Hei ${p.name}!
+Trykk på lenken for å spille:
+${url}`;
+
+ if(phone){
+   const clean=phone.replace(/[^+0-9]/g,"");
+   const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+   const smsUrl=isiOS
+     ? `sms:${clean}&body=${encodeURIComponent(message)}`
+     : `sms:${clean}?body=${encodeURIComponent(message)}`;
+   location.href=smsUrl;
+   return;
+ }
+
+ try{
+   if(navigator.share){
+     await navigator.share({title:"QuizArena Live",text:message,url});
+     return;
+   }
+ }catch(e){
+   if(e?.name==="AbortError")return;
+ }
+ try{
+   await navigator.clipboard.writeText(message);
+   alert(`Invitasjonen til ${p.name} er kopiert.`);
+ }catch{
+   prompt("Kopier denne lenken:",url);
+ }
+}
+async function playMyself(token){
+ const name=(prompt("Ditt navn:")||"").trim();
+ if(!name)return;
+ const {data,error}=await sb.rpc("qa_add_player_live",{p_host_token:token,p_name:name,p_phone:null});
+ if(error){alert(error.message);return}
+ let p=Array.isArray(data)?data[0]:data;
+ if(p?.player&&!p.player_token)p=p.player;
+ if(!p?.player_token){alert("Spiller kunne ikke åpnes.");return}
+ savePlayerLocal(name,"");
+ const url=playerUrl(p,state.session);
+ window.open(url,"_blank");
+}
+async function hostStart(token){const {error}=await sb.rpc("qa_host_start",{p_host_token:token});if(error)alert(error.message)}
+async function hostNext(token){const {error}=await sb.rpc("qa_host_next",{p_host_token:token});if(error)alert(error.message)}
+async function nextRound(token){
+ const diff=state.session.difficulty||"mix";
+ let pool=QUESTIONS.filter(q=>diff==="mix"||q.difficulty===diff);while(pool.length<10)pool=pool.concat(pool);
+ pool=shuffle(pool).slice(0,10);
+ const {error}=await sb.rpc("qa_start_next_round",{p_host_token:token,p_difficulty:diff,p_time_limit:state.session.time_limit_seconds||15,p_questions:pool});
+ if(error){alert(error.message);return}
+ await sb.rpc("qa_host_start",{p_host_token:token});
+}
+async function endQuiz(token){
+ if(!confirm("Avslutte quizen?"))return;
+ const {error}=await sb.rpc("qa_end_quiz",{p_host_token:token});if(error)alert(error.message);
+ else{localStorage.removeItem("qa_host_token");location.href=location.pathname}
+}
+
+async function loadPlayer(){
+ clearInterval(poll);
+ const refresh=async()=>{
+   const {data,error}=await sb.rpc("qa_player_state",{p_code:code,p_player_token:playerToken});
+   if(error||!data){app.innerHTML=`<main class="wrap"><div class="card"><h2>Ugyldig invitasjon</h2><p class="muted">Du kan fortsatt spille QuizArena alene.</p><button class="btn gold" onclick="soloHome()">🎮 Spill alene</button><p class="muted">Be quizmaster sende lenken på nytt.</p></div></main>`;return}
+   const old=state?.session?.current_index;state=data;
+   if(old!==state.session.current_index){selected="";seconds=state.session.time_limit_seconds||15;startedAt=Date.now()}
+   renderPlayer();
+ };
+ await refresh();poll=setInterval(refresh,1000);
+ 
+
+function rewardForWins(wins){
+ const w=Number(wins||0);
+ if(w>=50)return {title:"LEGEND",icon:"👑🏆",next:null};
+ if(w>=25)return {title:"CHAMPION",icon:"🏆✨",next:50};
+ if(w>=10)return {title:"GULLKRONE",icon:"👑",next:25};
+ if(w>=5)return {title:"SØLVKRONE",icon:"🥈👑",next:10};
+ if(w>=3)return {title:"PERSONLIG TROFÉ",icon:"🏆",next:5};
+ if(w>=1)return {title:"BRONSEMERKE",icon:"🥉",next:3};
+ return {title:"NY SPILLER",icon:"⭐",next:1};
+}
+function rewardText(wins){
+ const r=rewardForWins(wins);
+ return r.next?`${r.icon} ${r.title} · neste ved ${r.next} seire`:`${r.icon} ${r.title}`;
+}
+function playVictoryFanfare(){
+ try{
+   const AudioCtx=window.AudioContext||window.webkitAudioContext;
+   if(!AudioCtx)return;
+   const ctx=new AudioCtx();
+   const master=ctx.createGain();
+   master.gain.value=.16;
+   master.connect(ctx.destination);
+   const notes=[
+     [392.00,0.00,.18],[523.25,0.18,.18],[659.25,0.36,.18],
+     [783.99,0.58,.28],[659.25,0.90,.16],[783.99,1.08,.18],
+     [1046.50,1.30,.50]
+   ];
+   notes.forEach(([freq,start,dur])=>{
+     const osc=ctx.createOscillator();
+     const gain=ctx.createGain();
+     osc.type="sawtooth";
+     osc.frequency.value=freq;
+     gain.gain.setValueAtTime(0,ctx.currentTime+start);
+     gain.gain.linearRampToValueAtTime(.9,ctx.currentTime+start+.02);
+     gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+start+dur);
+     osc.connect(gain); gain.connect(master);
+     osc.start(ctx.currentTime+start);
+     osc.stop(ctx.currentTime+start+dur+.05);
+   });
+   setTimeout(()=>ctx.close(),2200);
+ }catch(e){}
+}
+function showHurra(name,wins){
+ playVictoryFanfare();
+ const r=rewardForWins(wins);
+ app.innerHTML=`<main class="wrap">
+ <div class="hero"><div class="logo">QUIZARENA</div></div>
+ <div class="card center winner-burst">
+   <div style="font-size:78px">🎺🎉👑</div>
+   <h1 style="font-size:44px;margin:8px 0;color:#ffd44f">HURRA!</h1>
+   <h2>Gratulerer ${esc(name||"vinner")}!</h2>
+   <div style="font-size:72px">${r.icon}</div>
+   <h3>${r.title}</h3>
+   <p class="muted">${r.next?`Neste belønning ved ${r.next} seire.`:"Du har nådd høyeste nivå!"}</p>
+   <button class="btn gold" onclick="home()">Fortsett</button>
+ </div></main>`;
+}
+
+let soloState=null, soloTimer=null;
+
+function soloHome(){
+ app.innerHTML=`<main class="wrap">
+ <div class="topbar"><button class="back-btn" onclick="home()">‹</button><b>Spill alene</b><span>🎮</span></div>
+ <div class="hero"><div class="logo">QUIZARENA</div><p class="sub">Solo Arena</p></div>
+ <div class="difficulty-card">
+   <button class="difficulty easy" onclick="startSolo('easy')">⭐ Lett</button>
+   <button class="difficulty medium" onclick="startSolo('mix')">⭐⭐ Middels</button>
+   <button class="difficulty hard" onclick="startSolo('hard')">⭐⭐⭐ Krevende</button>
+ </div>
+ <p class="muted center small">Ingen lobby · spillet starter med en gang.</p>
+ </main>`;
+}
+function startSolo(diff){
+ let pool=QUESTIONS.filter(q=>diff==="mix"||q.difficulty===diff);
+ while(pool.length<10)pool=pool.concat(pool);
+ const qs=shuffle(pool).slice(0,10);
+ soloState={questions:qs,index:0,correct:0,answers:[],seconds:15,selected:""};
+ localStorage.setItem("qa_solo_games",String(Number(localStorage.getItem("qa_solo_games")||0)+1));
+ renderSoloQuestion();
+}
+function renderSoloQuestion(){
+ clearInterval(soloTimer);
+ const s=soloState, q=s.questions[s.index];
+ app.innerHTML=`<main class="wrap">
+ <div class="hero"><div class="logo">QUIZARENA</div><p class="sub">Solo Arena</p></div>
+ <div class="topbar"><span>Spørsmål ${s.index+1}/10</span><span>${s.correct} riktig</span></div>
+ <div class="card">
+   <div class="timer-wrap"><div class="timer" id="soloSec">${s.seconds}</div></div>
+   <div class="question">${esc(q.question)}</div>
+   <div class="answer-grid">${q.options.map((o,i)=>`<button class="answer ${s.selected===o?"sel":""}" onclick='soloSelect(${JSON.stringify(o)})'><b>${"ABCD"[i]}.</b><br>${esc(o)}</button>`).join("")}</div>
+   <button class="btn green" ${s.selected?"":"disabled"} onclick="soloSubmit()">Svar</button>
+ </div></main>`;
+ soloTimer=setInterval(()=>{
+   if(!soloState)return;
+   soloState.seconds--;
+   const el=document.getElementById("soloSec");if(el)el.textContent=soloState.seconds;
+   if(soloState.seconds<=0){clearInterval(soloTimer);soloSubmit(true)}
+ },1000);
+}
+function soloSelect(ans){
+ soloState.selected=ans;
+ renderSoloQuestion();
+}
+function soloSubmit(timeout=false){
+ if(!soloState)return;
+ clearInterval(soloTimer);
+ const q=soloState.questions[soloState.index];
+ const ans=timeout?"":soloState.selected;
+ const ok=ans===q.correct;
+ if(ok)soloState.correct++;
+ soloState.answers.push({question:q.question,answer:ans,correct:q.correct,ok});
+ app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">QUIZARENA</div></div>
+ <div class="card center">
+   <div style="font-size:64px">${ok?"✅":"❌"}</div>
+   <h2>${ok?"Riktig!":"Feil"}</h2>
+   ${ok?"":`<p>Riktig svar: <b>${esc(q.correct)}</b></p>`}
+   <button class="btn ${ok?"green":"gold"}" onclick="soloNext()">${soloState.index>=9?"Se resultat":"Neste spørsmål"}</button>
+ </div></main>`;
+}
+function soloNext(){
+ if(soloState.index>=9){renderSoloResult();return}
+ soloState.index++;soloState.seconds=15;soloState.selected="";renderSoloQuestion();
+}
+function renderSoloResult(){
+ const c=soloState.correct;
+ let wins=Number(localStorage.getItem("qa_solo_wins")||0);
+ if(c===10){
+   wins++;
+   localStorage.setItem("qa_solo_wins",String(wins));
+   showHurra("Quizmester",wins);
+   return;
+ }
+ app.innerHTML=`<main class="wrap">
+ <div class="hero"><div class="logo">QUIZARENA</div><p class="sub">Solo resultat</p></div>
+ <div class="card center"><div class="trophy">⭐</div><h1>${c}/10 riktig</h1>
+ <p class="muted">Bra spilt!</p></div>
+ <div class="card"><h3>Gjennomgang</h3>${soloState.answers.map((a,i)=>`<p><b>${i+1}. ${esc(a.question)}</b><br>${a.ok?"✅":"❌"} ${a.answer?esc(a.answer):"Ikke svart"}${a.ok?"":` · riktig: ${esc(a.correct)}`}</p>`).join("")}</div>
+ <button class="btn green" onclick="soloHome()">Spill alene igjen</button>
+ <button class="btn dark" onclick="home()">Hovedmeny</button>
+ </main>`;
+}
+
+document.addEventListener("visibilitychange",async()=>{if(document.hidden&&state?.session?.anti_cheat_enabled){await sb.rpc("qa_flag_switch",{p_code:code,p_player_token:playerToken})}});
+}
+function renderPlayer(){
+ const s=state.session,p=state.player,q=state.question;
+ if(s.status==="lobby"){app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">QUIZARENA</div></div><div class="card center"><div style="font-size:60px">⏳</div><h2>Hei ${esc(p.name)}!</h2><p>Venter på quizmaster.</p></div></main>`;return}
+ if(s.status==="finished"||s.status==="closed"){renderResult();return}
+ if(!timer)timer=setInterval(()=>{if(state?.session?.status==="live"&&!state?.player?.answered_current&&seconds>0){seconds--;const el=document.getElementById("sec");if(el)el.textContent=seconds}},1000);
+ app.innerHTML=`<main class="wrap">
+ <div class="hero"><div class="logo">QUIZARENA</div></div>
+ <div class="topbar"><span>Spørsmål ${s.current_index+1}/${s.question_count||10}</span><span>${esc(p.name)}</span></div>
+ <div class="card">
+ <div class="timer-wrap"><div class="timer" id="sec">${seconds}</div></div>
+ <div class="question">${esc(q?.question||"Laster…")}</div>
+ <div class="answer-grid">${(q?.options||[]).map((o,i)=>`<button class="answer ${selected===o?"sel":""}" ${p.answered_current||seconds<=0?"disabled":""} onclick='selectAnswer(${JSON.stringify(o)})'><b>${"ABCD"[i]}.</b><br>${esc(o)}</button>`).join("")}</div>
+ <button class="btn green" ${!selected||p.answered_current||seconds<=0?"disabled":""} onclick="sendAnswer()">${p.answered_current?"Svar sendt ✅":seconds<=0?"Tiden er ute":"Send svar"}</button>
+ ${p.suspicious?'<p class="center" style="color:#ffc36b">⚠️ Sidebytte er registrert.</p>':""}
+ </div></main>`;
+}
+function selectAnswer(x){selected=x;renderPlayer()}
+async function sendAnswer(){
+ if(!selected||seconds<=0)return;
+ const ms=Math.max(0,Date.now()-startedAt);
+ const {error}=await sb.rpc("qa_submit_answer",{p_code:code,p_player_token:playerToken,p_answer:selected,p_response_ms:ms});
+ if(error)alert(error.message);
+}
+function renderResult(){
+ const p=state.player,s=state.session,review=state.review||[],wrong=review.filter(x=>!x.correct);
+ if(p.is_winner)setTimeout(celebrate,250);
+ app.innerHTML=`<main class="wrap"><div class="card center"><div class="trophy">${p.is_winner?"🏆🎉":"⭐"}</div>
+ <h1>${p.is_winner?"GRATULERER!":"Godt spilt!"}</h1><h2>${esc(p.name)}</h2>
+ <div class="score-strip">
+ <div class="score-box"><b>${p.correct_count ?? Math.max(0,(p.score||0)-(p.bonus_points||0))}/${s.question_count||10}</b><span class="muted small">riktig</span></div>
+ <div class="score-box"><b>+${p.bonus_points||0}</b><span class="muted small">bonus</span></div>
+ <div class="score-box"><b>${p.score||0}</b><span class="muted small">poeng</span></div>
+ </div><p>Plass ${p.rank} av ${p.total_players}</p>
+ ${wrong.length?`<div class="card" style="text-align:left"><h3>Feil svar (${wrong.length})</h3>${wrong.map(x=>`<p><b>${esc(x.question)}</b><br><span class="muted">Ditt svar: ${esc(x.your_answer||"Ikke besvart")}</span><br><span style="color:#91efac">Riktig: ${esc(x.correct_answer)}</span></p>`).join("<hr>")}</div>`:'<div class="card">🎯 Alt riktig!</div>'}
+ ${p.is_winner?`<div class="card"><h2>${p.wins||0} seire totalt</h2>${p.trophy_unlocked?`<div class="trophy">🏆</div><h2>Trofé låst opp!</h2><button class="btn gold" onclick="downloadTrophy()">Last ned trofé</button>`:`<p>${Math.max(0,3-(p.wins||0))} seier(e) igjen til trofé.</p>`}</div>`:""}
+ ${s.status==="closed"?'<h3>Quizen er avsluttet.</h3>':'<p class="muted">Vent på quizmaster for neste runde.</p>'}</div></main>`;
+}
+function celebrate(){
+ try{const u=new SpeechSynthesisUtterance(`Hurra! Gratulerer ${state.player.name}!`);u.lang="nb-NO";speechSynthesis.cancel();speechSynthesis.speak(u)}catch{}
+}
+function downloadTrophy(){
+ const p=state.player,c=document.createElement("canvas");c.width=1200;c.height=1500;const x=c.getContext("2d");
+ let g=x.createLinearGradient(0,0,0,1500);g.addColorStop(0,"#071522");g.addColorStop(.5,"#10425f");g.addColorStop(1,"#071522");x.fillStyle=g;x.fillRect(0,0,1200,1500);
+ x.strokeStyle="#e4b847";x.lineWidth=16;x.strokeRect(45,45,1110,1410);x.textAlign="center";x.fillStyle="#f6cf69";x.font="bold 82px Arial";x.fillText("QUIZARENA",600,190);
+ x.font="200px Arial";x.fillText("🏆",600,520);x.fillStyle="#fff";x.font="bold 88px Arial";x.fillText(p.name,600,720);x.fillStyle="#f6cf69";x.font="bold 58px Arial";x.fillText(`${p.wins} SEIRE`,600,840);
+ x.fillStyle="#fff";x.font="40px Arial";x.fillText("Gratulerer!",600,970);x.fillStyle="#f6cf69";x.font="70px Arial";x.fillText("★  ★  ★",600,1110);
+ const a=document.createElement("a");a.download=`QuizArena_Trofe_${p.name.replace(/[^\wæøåÆØÅ-]+/g,"_")}.png`;a.href=c.toDataURL("image/png");a.click();
+}
+
+if(playerToken&&code)loadPlayer();
+else if(hostParam)loadHost(hostParam);
+else home();
+</script>
+</body>
+</html>
