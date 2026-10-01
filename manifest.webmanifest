@@ -1,7 +1,7 @@
 {
-  "name": "QuizArena",
-  "short_name": "QuizArena",
-  "start_url": "./?v=20260930-force2",
+  "name": "Marios QuizArena",
+  "short_name": "Marios QuizArena",
+  "start_url": "./index6.html?v=20261001-marios",
   "display": "standalone",
   "background_color": "#02070d",
   "theme_color": "#06111d",
