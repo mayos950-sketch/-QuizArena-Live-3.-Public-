@@ -236,6 +236,12 @@ body[data-qa-theme="futurama"] .category-card{background:linear-gradient(145deg,
     linear-gradient(180deg,#4a4b3d,#1e2119) !important;
 }
 .war-category .category-name{font-size:19px;color:#f3dfad}
+
+.qa-win-stars{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:10000}
+.qa-win-stars span{position:absolute;color:#ffd568;text-shadow:0 0 12px #ffb52b;opacity:0;animation:qaStarBurst 2.8s ease-out forwards}
+@keyframes qaStarBurst{0%{opacity:0;transform:translateY(25px) scale(.2) rotate(0deg)}15%{opacity:1}65%{opacity:1}100%{opacity:0;transform:translateY(-170px) scale(1.2) rotate(150deg)}}
+@media(prefers-reduced-motion:reduce){.qa-win-stars span{animation:qaStarGlow 2.8s ease-out forwards}}
+@keyframes qaStarGlow{0%,100%{opacity:0}20%,70%{opacity:1}}
 </style>
 
 </head>
@@ -252,6 +258,92 @@ const app=document.getElementById("app");
 const params=new URLSearchParams(location.search);
 const playerToken=params.get("token"), code=params.get("code"), hostParam=params.get("host");
 let poll=null,timer=null,state=null,selected="",seconds=15,startedAt=0;
+let livePolling=null, sendingAnswer=false;
+const celebratedRounds=new Set();
+
+function connectionNotice(message=""){
+ let el=document.getElementById("qaConnectionNotice");
+ if(!el){
+   el=document.createElement("div");
+   el.id="qaConnectionNotice";
+   el.style.cssText="position:fixed;top:0;left:0;right:0;z-index:9999;padding:12px;background:#513f12;color:#fff;text-align:center;font:14px Arial";
+   el.setAttribute("role","status");
+   document.body.appendChild(el);
+ }
+ el.textContent=message;
+ el.hidden=!message;
+}
+function stopLivePolling(){
+ if(livePolling){
+   livePolling.active=false;
+   clearTimeout(livePolling.next);
+   livePolling.controller?.abort();
+ }
+ livePolling=null;
+ clearInterval(poll);
+ poll=null;
+ connectionNotice();
+}
+async function quizRpc(name,args,signal){
+ return await sb.rpc(name,args).abortSignal(signal);
+}
+function startLivePolling(request,consume,interval=1000,timeout=8000){
+ stopLivePolling();
+ const job={active:true,busy:false,again:false,next:null,controller:null};
+ livePolling=job;
+ job.refresh=async()=>{
+   if(!job.active)return;
+   if(job.busy){job.again=true;return}
+   clearTimeout(job.next);
+   job.busy=true;
+   const controller=new AbortController();
+   job.controller=controller;
+   let deadline;
+   try{
+     const result=await Promise.race([
+       request(controller.signal),
+       new Promise((_,reject)=>{
+         deadline=setTimeout(()=>{
+           controller.abort();
+           reject(new Error("Quiz request timed out"));
+         },timeout);
+       })
+     ]);
+     if(!job.active || livePolling!==job)return;
+     if(result.error)throw result.error;
+     connectionNotice();
+     await consume(result.data);
+   }catch(error){
+     if(job.active && livePolling===job){
+       connectionNotice("Forbindelsen er ustabil. Kobler til igjen automatisk…");
+     }
+   }finally{
+     clearTimeout(deadline);
+     job.busy=false;
+     if(job.active && livePolling===job){
+       const delay=job.again?0:interval;
+       job.again=false;
+       job.next=setTimeout(job.refresh,delay);
+     }
+   }
+ };
+ job.refresh();
+ return job;
+}
+function refreshLiveQuiz(){
+ if(livePolling?.active)livePolling.refresh();
+}
+document.addEventListener("visibilitychange",()=>{
+ if(!document.hidden)refreshLiveQuiz();
+});
+window.addEventListener("online",refreshLiveQuiz);
+window.addEventListener("pageshow",refreshLiveQuiz);
+document.addEventListener("visibilitychange",()=>{
+ if(document.hidden && playerToken && livePolling?.active && state?.session?.status==="live" && state.session.anti_cheat_enabled){
+   Promise.resolve(sb.rpc("qa_flag_switch",{p_code:code,p_player_token:playerToken})).catch(()=>{});
+ }
+});
+
 
 let qaAudioCtx=null;
 function unlockQuizAudio(){
@@ -704,22 +796,26 @@ async function hostSendAnswer(){unlockQuizAudio();
 }
 
 async function loadHost(token){
- clearInterval(poll);
- const refresh=async()=>{
-   const {data,error}=await sb.rpc("qa_host_state",{p_host_token:token});
-   if(error||!data){app.innerHTML=`<main class="wrap"><div class="card"><h2>Kunne ikke hente quizen.</h2><button class="btn" onclick="location.href=location.pathname">Nytt spill</button></div></main>`;return}
-   if(data?.session && (data.session.status==="finished"||data.session.status==="closed")){
+ startLivePolling(async signal=>{
+   const result=await quizRpc("qa_host_state",{p_host_token:token},signal);
+   const data=result.data;
+   if(!result.error && data?.session && ["finished","closed"].includes(data.session.status)){
      const myTok=getHostPlayerToken();
      if(myTok){
-       const mine=await sb.rpc("qa_player_state",{p_code:data.session.code,p_player_token:myTok});
-       if(!mine.error && mine.data) data.host_player_state=mine.data;
+       const mine=await quizRpc("qa_player_state",{p_code:data.session.code,p_player_token:myTok},signal);
+       if(!mine.error && mine.data)data.host_player_state=mine.data;
      }
+   }
+   return result;
+ },data=>{
+   if(!data){
+     app.innerHTML=`<main class="wrap"><div class="card"><h2>Kunne ikke hente quizen.</h2><button class="btn" onclick="location.href=location.pathname">Nytt spill</button></div></main>`;
+     return;
    }
    state=data;
    const a=document.activeElement;
-   if(!(a&&["pname","pphone"].includes(a.id))) renderHost(token);
- };
- await refresh();poll=setInterval(refresh,1000);
+   if(!(a&&["pname","pphone"].includes(a.id)))renderHost(token);
+ });
 }
 
 function scheduleHostAutoAdvance(token,s){
@@ -915,41 +1011,102 @@ async function endQuiz(token){
  location.href=location.pathname;
 }
 
+function playerQuestionKey(s){
+ return s?`${s.round_no}:${s.current_index}`:"";
+}
 async function loadPlayer(){
- clearInterval(poll);
- const refresh=async()=>{
-   const {data,error}=await sb.rpc("qa_player_state",{p_code:code,p_player_token:playerToken});
-   if(error||!data){app.innerHTML=`<main class="wrap"><div class="card"><h2>Invitasjonen virker ikke</h2><p class="muted">Be quizmaster sende en ny lenke.</p></div></main>`;return}
-   const oldKey=state?.session?`${state.session.round_no}:${state.session.current_index}`:"";
-   state=data;
-   const newKey=`${state.session.round_no}:${state.session.current_index}`;
-   if(oldKey!==newKey){selected="";seconds=15;startedAt=Date.now()}
-   renderPlayer();
- };
- await refresh();poll=setInterval(refresh,1000);
- document.addEventListener("visibilitychange",async()=>{if(document.hidden&&state?.session?.anti_cheat_enabled){await sb.rpc("qa_flag_switch",{p_code:code,p_player_token:playerToken})}});
+ let lastSignature="";
+ startLivePolling(
+   signal=>quizRpc("qa_player_state",{p_code:code,p_player_token:playerToken},signal),
+   data=>{
+     if(!data?.session || !data?.player){
+       app.innerHTML=`<main class="wrap"><div class="card"><h2>Invitasjonen virker ikke</h2><p class="muted">Be quizmaster sende en ny lenke.</p></div></main>`;
+       return;
+     }
+     const old=state?.session;
+     const incoming=data.session;
+     // Do not move backwards if a backend response is briefly stale.
+     if(old && (
+       Number(incoming.round_no)<Number(old.round_no) ||
+       (incoming.round_no===old.round_no && Number(incoming.current_index)<Number(old.current_index)) ||
+       (incoming.round_no===old.round_no && ["finished","closed"].includes(old.status) && incoming.status==="live")
+     ))return;
+     if(incoming.status==="live" && (playerQuestionKey(old)!==playerQuestionKey(incoming) || old?.status!=="live")){
+       selected="";
+       seconds=incoming.time_limit_seconds||15;
+       startedAt=Date.now();
+     }
+     state=data;
+     const signature=JSON.stringify(data);
+     if(signature!==lastSignature){
+       lastSignature=signature;
+       renderPlayer();
+     }
+   }
+ );
 }
 function renderPlayer(){
  const s=state.session,p=state.player,q=state.question;
  if(s.status==="lobby"){app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">QUIZARENA</div></div><div class="card center"><div style="font-size:60px">⏳</div><h2>Hei ${esc(p.name)}!</h2><p>Venter på quizmaster.</p></div></main>`;return}
  if(s.status==="finished"||s.status==="closed"){renderResult();return}
- if(!timer)timer=setInterval(()=>{if(state?.session?.status==="live"&&!state?.player?.answered_current&&seconds>0){seconds--;const el=document.getElementById("sec");if(el)el.textContent=seconds}},1000);
+ if(!timer)timer=setInterval(()=>{
+   if(state?.session?.status!=="live" || state?.player?.answered_current)return;
+   const limit=state.session.time_limit_seconds||15;
+   const next=Math.max(0,Math.ceil((startedAt+limit*1000-Date.now())/1000));
+   if(next===seconds)return;
+   seconds=next;
+   const el=document.getElementById("sec");
+   if(el)el.textContent=seconds;
+   if(seconds===0)renderPlayer();
+ },250);
  app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">QUIZARENA</div><p>Spørsmål ${s.current_index+1} av ${s.question_count||10}</p></div>
  <div class="card"><div class="timer" id="sec">${seconds}</div><div class="question">${esc(q?.question||"Laster…")}</div>
  ${(q?.options||[]).map((o,i)=>`<button class="answer ${selected===o?"sel":""}" ${p.answered_current||seconds<=0?"disabled":""} onclick='selectAnswer(${JSON.stringify(o)})'><b>${"ABCD"[i]}.</b> ${esc(o)}</button>`).join("")}
- <button class="btn green" ${!selected||p.answered_current||seconds<=0?"disabled":""} onclick="sendAnswer()">${p.answered_current?"Svar sendt ✅":seconds<=0?"Tiden er ute":"Send svar"}</button>
+ <button class="btn green" ${!selected||p.answered_current||seconds<=0||sendingAnswer?"disabled":""} onclick="sendAnswer()">${sendingAnswer?"Sender…":p.answered_current?"Svar sendt ✅":seconds<=0?"Tiden er ute":"Send svar"}</button>
  ${p.suspicious?'<p class="center" style="color:#ffc36b">⚠️ Sidebytte er registrert.</p>':""}</div></main>`;
 }
 function selectAnswer(x){selected=x;renderPlayer()}
 async function sendAnswer(){unlockQuizAudio();
- if(!selected||seconds<=0)return;
- const ms=Math.max(0,Date.now()-startedAt);
- const {error}=await sb.rpc("qa_submit_answer",{p_code:code,p_player_token:playerToken,p_answer:selected,p_response_ms:ms});
- if(error)alert(error.message);
+ if(!selected||seconds<=0||sendingAnswer||state?.session?.status!=="live")return;
+ const questionKey=playerQuestionKey(state.session);
+ const answer=selected;
+ sendingAnswer=true;
+ renderPlayer();
+ const controller=new AbortController();
+ let deadline;
+ try{
+   const result=await Promise.race([
+     quizRpc("qa_submit_answer",{
+       p_code:code,p_player_token:playerToken,p_answer:answer,
+       p_response_ms:Math.max(0,Date.now()-startedAt)
+     },controller.signal),
+     new Promise((_,reject)=>{
+       deadline=setTimeout(()=>{controller.abort();reject(new Error("Svar kunne ikke bekreftes"));},8000);
+     })
+   ]);
+   if(result.error)throw result.error;
+   if(livePolling?.active && questionKey===playerQuestionKey(state?.session)){
+     state.player.answered_current=true;
+   }
+ }catch(error){
+   if(livePolling?.active)connectionNotice("Svaret kunne ikke bekreftes. Henter svarstatus…");
+ }finally{
+   clearTimeout(deadline);
+   sendingAnswer=false;
+   if(livePolling?.active){renderPlayer();refreshLiveQuiz();}
+ }
 }
 function renderResult(){
  const p=state.player,s=state.session,review=state.review||[],wrong=review.filter(x=>!x.correct);
- if(p.is_winner)setTimeout(celebrate,250);
+ if(p.is_winner){
+   const winnerKey=`${p.id}:${s.round_no}`;
+   if(!celebratedRounds.has(winnerKey)){
+     celebratedRounds.add(winnerKey);
+     setTimeout(()=>{
+       if(livePolling?.active && state?.player?.id===p.id && state?.session?.round_no===s.round_no)celebrate();
+     },250);
+   }
+ }
  app.innerHTML=`<main class="wrap"><div class="card center"><div class="trophy">${p.is_winner?"🏆🎉":"⭐"}</div>
  <h1>${p.is_winner?"GRATULERER!":"Godt spilt!"}</h1><h2>${esc(p.name)}</h2>
  <p style="font-size:24px"><b>${p.correct_count??0}/${s.question_count||10}</b> riktig</p><p class="muted">${p.bonus_points??0} bonuspoeng · ${p.score} poeng totalt</p><p>Plass ${p.rank} av ${p.total_players}</p>
@@ -997,12 +1154,31 @@ function playWinnerFanfare(){
   }catch{}
 }
 
+function showWinnerStars(){
+  document.getElementById("qaWinnerStars")?.remove();
+  const layer=document.createElement("div");
+  layer.id="qaWinnerStars";
+  layer.className="qa-win-stars";
+  layer.setAttribute("aria-hidden","true");
+  for(let i=0;i<28;i++){
+    const star=document.createElement("span");
+    star.textContent="★";
+    star.style.left=(5+Math.random()*90)+"%";
+    star.style.top=(15+Math.random()*75)+"%";
+    star.style.fontSize=(18+Math.random()*24)+"px";
+    star.style.animationDelay=(Math.random()*.45)+"s";
+    layer.appendChild(star);
+  }
+  document.body.appendChild(layer);
+  setTimeout(()=>layer.remove(),3400);
+}
 function celebrate(){
+  showWinnerStars();
   playWinnerFanfare();
   setTimeout(()=>{
     try{
       const name=state?.player?.name||"";
-      const u=new SpeechSynthesisUtterance(`HURRA! Gratulerer ${name}!`);
+      const u=new SpeechSynthesisUtterance(`Gratulerer, ${name}! Du vant!`);
       u.lang="nb-NO";
       u.rate=0.95;
       u.pitch=1.15;
@@ -1025,7 +1201,7 @@ function downloadTrophy(){
 let soloState=null, soloTimer=null;
 
 function soloHome(){
-  clearInterval(poll);
+  stopLivePolling();
   if(timer){clearInterval(timer);timer=null}
   if(soloTimer){clearInterval(soloTimer);soloTimer=null}
   const cat=qaSelectedCategory||"Alle kategorier";
@@ -1145,5 +1321,6 @@ else home();
 </script>
 </body>
 </html>
+
 
 
