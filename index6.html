@@ -6,13 +6,13 @@
 <meta name="theme-color" content="#071321">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>QuizArena</title>
+<title>Marios QuizArena</title>
 
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.webmanifest?v=20261001-marios">
 <meta name="theme-color" content="#06111d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="QuizArena">
+<meta name="apple-mobile-web-app-title" content="Marios QuizArena">
 <link rel="apple-touch-icon" href="icon-192.png">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -242,6 +242,7 @@ body[data-qa-theme="futurama"] .category-card{background:linear-gradient(145deg,
 @keyframes qaStarBurst{0%{opacity:0;transform:translateY(25px) scale(.2) rotate(0deg)}15%{opacity:1}65%{opacity:1}100%{opacity:0;transform:translateY(-170px) scale(1.2) rotate(150deg)}}
 @media(prefers-reduced-motion:reduce){.qa-win-stars span{animation:qaStarGlow 2.8s ease-out forwards}}
 @keyframes qaStarGlow{0%,100%{opacity:0}20%,70%{opacity:1}}
+.logo{text-transform:none}.qa-owner{display:block;font-size:24px;letter-spacing:0;line-height:1.15;margin:7px 0 3px}
 </style>
 
 </head>
@@ -506,7 +507,7 @@ function pickQuestionSetForCategory(diff,count,category){
 }
 function categoryScreen(){
   app.innerHTML=`<main class="wrap category-screen">
-    <div class="hero"><div class="crown-mark small-crown">👑</div><div class="logo">QUIZARENA</div></div>
+    <div class="hero"><div class="crown-mark small-crown">👑</div><div class="logo"><span class="qa-owner">Marios</span>QuizArena</div></div>
     <div class="category-title"><h2>Velg kategori</h2><p>${QA_CATEGORIES.length} kategorier · inkl. 1. og 2. verdenskrig</p></div>
     <div class="category-grid">
       ${QA_CATEGORIES.map(([name,icon],i)=>`<button type="button" class="category-card ${name==='1. og 2. verdenskrig'?'war-category':''}" data-cat-index="${i}">
@@ -601,7 +602,7 @@ function pendingSmsHref(){
   const p=getPendingInvite();
   if(!p)return "#";
   const clean=(p.phone||"").replace(/[^+0-9]/g,"");
-  const body=encodeURIComponent(`QuizArena Live
+  const body=encodeURIComponent(`Marios QuizArena
 
 ${p.url}
 
@@ -614,7 +615,7 @@ async function sharePendingInvite(){
   if(!p)return;
   try{
     if(navigator.share){
-      await navigator.share({title:"QuizArena Live",text:`Bli med i QuizArena, ${p.name}!`,url:p.url});
+      await navigator.share({title:"Marios QuizArena",text:`Bli med i Marios QuizArena, ${p.name}!`,url:p.url});
       return;
     }
   }catch(e){
@@ -637,7 +638,7 @@ function playerUrl(p,s){
 
 
 const QA_THEMES=[
-  ["arena","Arena","👑","Standard QuizArena"],
+  ["arena","Arena","👑","Standard Marios QuizArena"],
   ["snoopy","Snoopy","🐾","Lys og leken tegneserie-stil"],
   ["startrek","Star Trek","🛸","Romskip og futuristisk kontrollpanel"],
   ["ww2","WW2","🪖","Mørkt militær- og karttema"],
@@ -652,7 +653,7 @@ function applyQaTheme(theme,save=true){
 function settingsScreen(){
   const current=getQaTheme();
   app.innerHTML=`<main class="wrap">
-    <div class="hero"><div class="crown-mark small-crown">👑</div><div class="logo">QUIZARENA</div></div>
+    <div class="hero"><div class="crown-mark small-crown">👑</div><div class="logo"><span class="qa-owner">Marios</span>QuizArena</div></div>
     <div class="card">
       <h2>Innstillinger</h2><div class="pill">Ny versjon · Themes aktiv</div>
       <p class="muted">Velg bare utseendet. Spillreglene endres ikke.</p>
@@ -680,7 +681,7 @@ function home(){
  app.innerHTML=`<main class="wrap home-arena">
    <div class="hero arena-hero">
      <div class="crown-mark">👑</div>
-     <div class="logo">QUIZARENA</div>
+     <div class="logo"><span class="qa-owner">Marios</span>QuizArena</div>
      <div class="flagline">🇳🇴</div>
      <h2>Norge & Verden</h2>
      <p class="sub">5 eller 10 spørsmål · Solo eller live med venner</p>
@@ -699,7 +700,7 @@ function hostSetup(){
  const qm=getQuizmasterName();
  const savedCat=localStorage.getItem("qa_host_category")||"";
  app.innerHTML=`<main class="wrap">
-   <div class="hero"><div class="logo">QuizArena</div></div>
+   <div class="hero"><div class="logo"><span class="qa-owner">Marios</span>QuizArena</div></div>
    <div class="card">
      <h2>Lag eller bli med</h2>
      ${qm?`<div class="pill">Quizmaster: ${esc(qm)}</div>`:`<label>Ditt navn</label><input id="qmname" placeholder="Navn">`}
@@ -847,7 +848,7 @@ function playerPresence(p){
 
 function renderHost(token){
  const s=state.session,ps=state.players||[];
- let h=`<main class="wrap"><div class="hero"><div class="logo">👑 QUIZARENA</div></div>
+ let h=`<main class="wrap"><div class="hero"><div class="logo"><span class="qa-owner">Marios</span>QuizArena</div></div>
  <div class="card"><div class="row"><div><div class="muted">Quizkode</div><div class="code">${esc(s.code)}</div></div><div><div class="muted">Runde</div><h2>${s.round_no||1}/10</h2></div></div></div><div class="card center"><span class="pill">📖 ${esc(localStorage.getItem("qa_host_category")||"Alle kategorier")}</span></div>`;
  if(s.status!=="live")stopHostAutoAdvance();
  if(s.status==="lobby"){
@@ -1047,7 +1048,7 @@ async function loadPlayer(){
 }
 function renderPlayer(){
  const s=state.session,p=state.player,q=state.question;
- if(s.status==="lobby"){app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">QUIZARENA</div></div><div class="card center"><div style="font-size:60px">⏳</div><h2>Hei ${esc(p.name)}!</h2><p>Venter på quizmaster.</p></div></main>`;return}
+ if(s.status==="lobby"){app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo"><span class="qa-owner">Marios</span>QuizArena</div></div><div class="card center"><div style="font-size:60px">⏳</div><h2>Hei ${esc(p.name)}!</h2><p>Venter på quizmaster.</p></div></main>`;return}
  if(s.status==="finished"||s.status==="closed"){renderResult();return}
  if(!timer)timer=setInterval(()=>{
    if(state?.session?.status!=="live" || state?.player?.answered_current)return;
@@ -1059,7 +1060,7 @@ function renderPlayer(){
    if(el)el.textContent=seconds;
    if(seconds===0)renderPlayer();
  },250);
- app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo">QUIZARENA</div><p>Spørsmål ${s.current_index+1} av ${s.question_count||10}</p></div>
+ app.innerHTML=`<main class="wrap"><div class="hero"><div class="logo"><span class="qa-owner">Marios</span>QuizArena</div><p>Spørsmål ${s.current_index+1} av ${s.question_count||10}</p></div>
  <div class="card"><div class="timer" id="sec">${seconds}</div><div class="question">${esc(q?.question||"Laster…")}</div>
  ${(q?.options||[]).map((o,i)=>`<button class="answer ${selected===o?"sel":""}" ${p.answered_current||seconds<=0?"disabled":""} onclick='selectAnswer(${JSON.stringify(o)})'><b>${"ABCD"[i]}.</b> ${esc(o)}</button>`).join("")}
  <button class="btn green" ${!selected||p.answered_current||seconds<=0||sendingAnswer?"disabled":""} onclick="sendAnswer()">${sendingAnswer?"Sender…":p.answered_current?"Svar sendt ✅":seconds<=0?"Tiden er ute":"Send svar"}</button>
@@ -1191,10 +1192,10 @@ function celebrate(){
 function downloadTrophy(){
  const p=state.player,c=document.createElement("canvas");c.width=1200;c.height=1500;const x=c.getContext("2d");
  let g=x.createLinearGradient(0,0,0,1500);g.addColorStop(0,"#071522");g.addColorStop(.5,"#10425f");g.addColorStop(1,"#071522");x.fillStyle=g;x.fillRect(0,0,1200,1500);
- x.strokeStyle="#e4b847";x.lineWidth=16;x.strokeRect(45,45,1110,1410);x.textAlign="center";x.fillStyle="#f6cf69";x.font="bold 82px Arial";x.fillText("QUIZARENA",600,190);
+ x.strokeStyle="#e4b847";x.lineWidth=16;x.strokeRect(45,45,1110,1410);x.textAlign="center";x.fillStyle="#f6cf69";x.font="bold 82px Arial";x.fillText("Marios QuizArena",600,190,1060);
  x.font="200px Arial";x.fillText("🏆",600,520);x.fillStyle="#fff";x.font="bold 88px Arial";x.fillText(p.name,600,720);x.fillStyle="#f6cf69";x.font="bold 58px Arial";x.fillText(`${p.wins} SEIRE`,600,840);
  x.fillStyle="#fff";x.font="40px Arial";x.fillText("Gratulerer!",600,970);x.fillStyle="#f6cf69";x.font="70px Arial";x.fillText("★  ★  ★",600,1110);
- const a=document.createElement("a");a.download=`QuizArena_Trofe_${p.name.replace(/[^\wæøåÆØÅ-]+/g,"_")}.png`;a.href=c.toDataURL("image/png");a.click();
+ const a=document.createElement("a");a.download=`Marios_QuizArena_Trofe_${p.name.replace(/[^\wæøåÆØÅ-]+/g,"_")}.png`;a.href=c.toDataURL("image/png");a.click();
 }
 
 
@@ -1206,7 +1207,7 @@ function soloHome(){
   if(soloTimer){clearInterval(soloTimer);soloTimer=null}
   const cat=qaSelectedCategory||"Alle kategorier";
   app.innerHTML=`<main class="wrap">
-    <div class="hero"><div class="crown-mark small-crown">👑</div><div class="logo">QUIZARENA</div><p class="sub">Solo</p></div>
+    <div class="hero"><div class="crown-mark small-crown">👑</div><div class="logo"><span class="qa-owner">Marios</span>QuizArena</div><p class="sub">Solo</p></div>
     <div class="card">
       <h2>Spill alene</h2>
       <div class="pill">📖 ${esc(cat)}</div>
@@ -1247,7 +1248,7 @@ function renderSolo(){
   clearInterval(soloTimer);
   const s=soloState,q=s.questions[s.index];
   app.innerHTML=`<main class="wrap">
-    <div class="hero"><div class="logo">QUIZARENA</div><p>Spørsmål ${s.index+1} av ${s.questions.length}</p></div>
+    <div class="hero"><div class="logo"><span class="qa-owner">Marios</span>QuizArena</div><p>Spørsmål ${s.index+1} av ${s.questions.length}</p></div>
     <div class="card">
       <div class="timer" id="soloSec">${s.seconds}</div>
       <div class="question">${esc(q.question)}</div>
@@ -1304,7 +1305,7 @@ function soloResult(){
   const s=soloState;
   const wrong=s.answers.filter(x=>!x.ok);
   app.innerHTML=`<main class="wrap">
-    <div class="hero"><div class="logo">QUIZARENA</div><p class="sub">Solo resultat</p></div>
+    <div class="hero"><div class="logo"><span class="qa-owner">Marios</span>QuizArena</div><p class="sub">Solo resultat</p></div>
     <div class="card center">
       <div class="trophy">${s.correct===s.questions.length?"🏆":"⭐"}</div>
       <h1>${s.correct}/${s.questions.length} riktig</h1>
